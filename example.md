@@ -1,151 +1,191 @@
-# `UFlowPilotTask` : `UObject`
+---
+title: UFlowPilotTask
+description: Reference page for UFlowPilotTask class
+---
 
-## Properties
+import Ref from '../../../components/Ref.astro'
 
-| Property | Description |
-|----------|-------------|
-| `UPROPERTY(EditDefaultsOnly, Category = "Task Options")`<br>`FName TaskName = {};` |  |
-| `UPROPERTY(EditDefaultsOnly, Category = "Task Options")`<br>`FName Description = {};` |  |
-| `UPROPERTY(EditDefaultsOnly, Category = "Task Options")`<br>`uint8 bEnabled: 1;` | If False, Will skip this Task's execution |
-| `UPROPERTY()`<br>`UFlowPilotTask* Parent = nullptr;` |  |
+import { Image } from 'astro:assets';
+import schema from '../../../assets/uflowpilottask_executionflow.png';
 
-## Methods
+<Ref c="UFlowPilotTask" p="UObject" />
+
+## Description
+
+<Image src={schema} alt="UFlowPilotTask Schema" />
+
+`UFlowPilotTask` is the base class for all Tasks that can run in FlowPilot.
+
+The schema above shows succintely how it works.
+
+Each Tasks starts its execution by calling their `Enter()` methods. They can either succeed or fail at this stage.
+Upon failing, the task ends. If succeeded, `Tick` is then called and we check the Task Result ( InProgress, Succeeded, Failed, Error ).
+If the Task returns `Succeeded` the `Exit()` method is called.
+
+Tasks can also be cancelled, and end directly.
+
+Each class that can be implemented need to override a couple of virtual methods exposed by this task, either in Cpp or implementing the Blueprint versions when creating a `UFlowPilotTask` via blueprint.
+
+## Class Info
+__Parent Class:__ `UObject`
+### Functions
+
+#### `UFlowPilotTask` 
 
 ```cpp
 UFlowPilotTask();
 ```
 
-/**
-* FlowPilotTask
-* Base class for any task that can be run by FlowPilotComponent
-* Class is tickable.
-* If Tick not implemented, will automatically succeed on first tick
-*/
+#### `Setup` 
+Setups Tasks. Called once per FlowPilotExecution, even after restarts.
 
 ```cpp
 virtual void Setup(FFlowContext* InContext);
 ```
 
- Setups Tasks. Called once per FlowPilotExecution, even after restarts.
+#### `Enter` 
+Called when starting this Task. Returns true on success
 
 ```cpp
 virtual bool Enter();
 ```
 
- Called when starting this Task. Returns true on success
+#### `Tick` 
+Called on Tick. Will success automatically if not implemented by Child classes
 
 ```cpp
 virtual EFPTaskResult Tick(float DeltaTime);
 ```
 
- Called on Tick. Will success automatically if not implemented by Child classes
+#### `Exit` 
+Called when Task Finished
 
 ```cpp
 virtual void Exit(EFPTaskResult TaskResult);
 ```
 
- Called when Task Finished
+#### `Reset` 
+Resets all Tasks into their Setup States
 
 ```cpp
 virtual void Reset();
 ```
 
- Resets all Tasks into their Setup States
+#### `HasParent` 
+Disabled Tasks are skipped during execution
+Enables or Disables Task. Disabled Tasks will be skipped.
+Returns Task Name
+Sets Task Name
+Get Task Description
+Returns True if Task has Parent Task.
+Returns False if Task is Root Sequence Task
 
 ```cpp
 bool HasParent() const;
 ```
 
- Disabled Tasks are skipped during execution
- Enables or Disables Task. Disabled Tasks will be skipped.
- Returns Task Name
- Sets Task Name
- Get Task Description
- Returns True if Task has Parent Task.
- Returns False if Task is Root Sequence Task
+#### `GetParent` 
+Returns Parent Task or nullptr
 
 ```cpp
 UFlowPilotTask* GetParent() const;
 ```
 
- Returns Parent Task or nullptr
+#### `IsParent` 
+Sets Parent Task
+Returns True if This task is a FlowPilotParent Task containing children Tasks.
 
 ```cpp
 bool IsParent() const;
 ```
 
- Sets Parent Task
- Returns True if This task is a FlowPilotParent Task containing children Tasks.
+#### `GetAsParent` 
+Returns this Cast to FlowPilotParent task.
 
 ```cpp
 UFlowPilotParent* GetAsParent();
 ```
 
- Returns this Cast to FlowPilotParent task.
+#### `GetBrush` 
+Returns true if valid. Child Tasks should implement their Validations
 
 ```cpp
 virtual FName GetBrush() const;
 ```
 
- Returns true if valid. Child Tasks should implement their Validations
+#### `GetRuntimeDescription` 
+Gathers information to display to debug view about Task.
 
 ```cpp
 virtual void GetRuntimeDescription(TArray<FString>& OutLines) const {};
 ```
 
- Gathers information to display to debug view about Task.
+#### `HasStarted` 
+Returns true when Task Started
 
 ```cpp
+UFUNCTION(BlueprintCallable, Category="FlowPilotTask")
 bool HasStarted() const;
 ```
 
- Returns true when Task Started
+#### `IsActive` 
+Returns true when Task in Progress and Not Complete
 
 ```cpp
+UFUNCTION(BlueprintCallable, Category="FlowPilotTask")
 bool IsActive() const;
 ```
 
- Returns true when Task in Progress and Not Complete
+#### `IsComplete` 
+Returns true when Task is Complete
 
 ```cpp
+UFUNCTION(BlueprintCallable, Category="FlowPilotTask")
 bool IsComplete() const;
 ```
 
- Returns true when Task is Complete
+#### `ForEachActor` 
+Executes 'InFunc' to all Actors found from 'ActorReference'
 
 ```cpp
 bool ForEachActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(AActor* const /*Actor*/)> InFunc) const;
 ```
 
- Executes 'InFunc' to all Actors found from 'ActorReference'
+#### `ForEachConstActor` 
+Executes 'InFunc' to all const Actors found from 'ActorReference'
+Const means the function should not modify 'Actors'
 
 ```cpp
 bool ForEachConstActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(const AActor* const /*Actor*/)> InFunc) const;
 ```
 
- Executes 'InFunc' to all const Actors found from 'ActorReference'
- Const means the function should not modify 'Actors'
+#### `GetFlowPilotComponent` 
+Returns FlowPilotComponent
 
 ```cpp
+UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 UFlowPilotComponent* GetFlowPilotComponent() const;
 ```
 
- Returns FlowPilotComponent
+#### `GetFlowPilotOwnerActor` 
+Returns FlowPilotComponent Owner Actor
 
 ```cpp
+UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 AActor* GetFlowPilotOwnerActor() const;
 ```
 
- Returns FlowPilotComponent Owner Actor
+#### `GetWorldContext` 
+Returns FlowPilot Actor World
 
 ```cpp
+UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 UWorld* GetWorldContext() const;
 ```
 
- Returns FlowPilot Actor World
+#### `GetWorld` 
 
 ```cpp
 virtual UWorld* GetWorld() const override;
 ```
-
 
