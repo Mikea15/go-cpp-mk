@@ -145,9 +145,11 @@ protected:
 	virtual UWorld* GetWorld() const override;
 
 protected:
+	// Task name
 	UPROPERTY(EditDefaultsOnly, Category = "Task Options")
 	FName TaskName = {};
 	
+	// Task description
 	UPROPERTY(EditDefaultsOnly, Category = "Task Options")
 	FName Description = {};
 
@@ -155,6 +157,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Task Options")
 	uint8 bEnabled: 1;
 
+	// Parent Task
 	UPROPERTY()
 	UFlowPilotTask* Parent = nullptr;
 

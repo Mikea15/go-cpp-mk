@@ -18,6 +18,16 @@ const (
 	Function
 	Property
 	AccessModifier
+	OpenIgnore
+	CloseIgnore
+)
+
+type AccessType int
+
+const (
+	Public = iota
+	Protected
+	Private
 )
 
 type FileOutput struct {
@@ -34,14 +44,17 @@ type ClassInfo struct {
 }
 
 type PropertyInfo struct {
+	Macro       string
 	Declaration string
 	Comments    string
+	Access      AccessType
 }
 
 type FunctionInfo struct {
 	Name        string
 	Declaration string
 	Comments    string
+	Access      AccessType
 }
 
 func main() {
@@ -54,7 +67,6 @@ func main() {
 	destFolder := os.Args[2]
 
 	var fileList []FileOutput
-	// var classList []ClassInfo
 
 	err := filepath.Walk(sourceFolder, func(path string, info os.FileInfo, err error) error {
 
@@ -110,19 +122,22 @@ func extractInfo(file *os.File) ClassInfo {
 	var functionStack string
 	var propertyStack string
 
-	ignoreList := []string{
-		"#",
+	ignorePrefixList := []string{
+		"};",
 		"// UFlowPilotTask",
 		"//~UFlowPilotTask",
 	}
 
+	var isProperty = false
+	var ignoreBlock = false
+	var currentAccessType AccessType = Private
 	var prevId LineId = Empty
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
 		var skip = false
-		for i := 0; i < len(ignoreList); i++ {
-			if strings.Contains(line, ignoreList[i]) {
+		for i := 0; i < len(ignorePrefixList); i++ {
+			if strings.HasPrefix(line, ignorePrefixList[i]) {
 				skip = true
 				break
 			}
@@ -134,7 +149,21 @@ func extractInfo(file *os.File) ClassInfo {
 
 		id := idLine(line, prevId)
 
-		// fmt.Printf("[%d] %s\n", id, line)
+		fmt.Printf("[%d][%d][%d] %s\n", id, currentAccessType, ignoreBlock, line)
+
+		if ignoreBlock && id == CloseIgnore {
+			ignoreBlock = false
+			continue
+		}
+
+		if !ignoreBlock && id == OpenIgnore {
+			ignoreBlock = true
+			continue
+		}
+
+		if ignoreBlock {
+			continue
+		}
 
 		switch id {
 		case Empty:
@@ -144,7 +173,7 @@ func extractInfo(file *os.File) ClassInfo {
 			commentStack += cleanComment(line) + "\n"
 		case Class:
 			if !isClassMacro(line) {
-				info.Comments = commentStack
+				info.Comments = strings.TrimSpace(commentStack)
 				commentStack = ""
 
 				var name, parent = extractClassInfo(line)
@@ -158,7 +187,8 @@ func extractInfo(file *os.File) ClassInfo {
 				var data = FunctionInfo{
 					Name:        extractFunctionName(line),
 					Declaration: functionStack + line,
-					Comments:    commentStack,
+					Comments:    strings.TrimSpace(commentStack),
+					Access:      currentAccessType,
 				}
 				commentStack = ""
 				functionStack = ""
@@ -168,20 +198,37 @@ func extractInfo(file *os.File) ClassInfo {
 				functionStack = line + "\n"
 			}
 		case Property:
-			propertyStack += line + "\n"
+			propertyStack = line + "\n"
 
 			if !isPropertyMacro(line) {
-				var data = PropertyInfo{
-					Declaration: propertyStack,
-					Comments:    commentStack,
-				}
-				commentStack = ""
-				propertyStack = ""
 
-				info.Properties = append(info.Properties, data)
+				if isProperty {
+					var data = PropertyInfo{
+						Macro:       propertyStack,
+						Declaration: line,
+						Comments:    strings.TrimSpace(commentStack),
+						Access:      currentAccessType,
+					}
+					commentStack = ""
+					propertyStack = ""
+
+					info.Properties = append(info.Properties, data)
+				}
+				isProperty = false
+
+			} else {
+				isProperty = true
 			}
 		case AccessModifier:
-
+			accessStr := strings.TrimRight(line, ":")
+			switch accessStr {
+			case "public":
+				currentAccessType = Public
+			case "protected":
+				currentAccessType = Protected
+			case "private":
+				currentAccessType = Private
+			}
 		default:
 		}
 
@@ -199,6 +246,14 @@ func idLine(line string, prevId LineId) LineId {
 
 	if len(line) == 0 || isCopy(line) {
 		return Empty
+	}
+
+	if isOpenIgnore(line) {
+		return OpenIgnore
+	}
+
+	if isCloseIgnore(line) {
+		return CloseIgnore
 	}
 
 	if isComment(line, prevId == Comment) {
@@ -226,6 +281,14 @@ func idLine(line string, prevId LineId) LineId {
 	}
 
 	return Empty
+}
+
+func isOpenIgnore(line string) bool {
+	return strings.Contains(line, "#if")
+}
+
+func isCloseIgnore(line string) bool {
+	return strings.Contains(line, "#endif")
 }
 
 func isComment(line string, prevIsComment bool) bool {
@@ -388,24 +451,26 @@ func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 	}
 
 	if info.ParentName != "" {
-		writer.WriteString(fmt.Sprintf("__Parent Class:__ `%s`\n", info.ParentName))
+		writer.WriteString(fmt.Sprintf("__Parent Class:__ `%s`\n\n", info.ParentName))
 	}
 
-	// writer.WriteString("## Properties\n\n")
-	// writer.WriteString("| Property | Description |\n")
-	// writer.WriteString("|----------|-------------|\n")
-	// for _, prop := range info.Properties {
-	// 	writer.WriteString(fmt.Sprintf("| `%s` | %s |\n", prop.Declaration, prop.Comments))
-	// }
-	// writer.WriteString("\n")
+	writer.WriteString("### Properties\n\n")
+	writer.WriteString("| Property | Description |\n")
+	writer.WriteString("| :--- | :--- |\n")
+	for _, prop := range info.Properties {
+		writer.WriteString(fmt.Sprintf("| `%s` | %s |\n", prop.Declaration, prop.Comments))
+	}
+	writer.WriteString("\n")
 
 	writer.WriteString("### Functions\n\n")
 	for _, function := range info.Functions {
-		writer.WriteString("#### `" + function.Name + "` \n")
-		writer.WriteString(function.Comments + "\n")
-		writer.WriteString("```cpp\n")
-		writer.WriteString(function.Declaration + "\n")
-		writer.WriteString("```\n\n")
+		if function.Access != Private {
+			writer.WriteString("#### `" + function.Name + "` \n")
+			writer.WriteString(function.Comments + "\n")
+			writer.WriteString("```cpp\n")
+			writer.WriteString(function.Declaration + "\n")
+			writer.WriteString("```\n\n")
+		}
 	}
 
 	writer.Flush()

@@ -28,6 +28,16 @@ Each class that can be implemented need to override a couple of virtual methods 
 
 ## Class Info
 __Parent Class:__ `UObject`
+
+### Properties
+
+| Property | Description |
+| :--- | :--- |
+| `FName TaskName = {};` | Task name |
+| `FName Description = {};` | Task description |
+| `uint8 bEnabled: 1;` | If False, Will skip this Task's execution |
+| `UFlowPilotTask* Parent = nullptr;` | Parent Task |
+
 ### Functions
 
 #### `UFlowPilotTask` 
@@ -38,35 +48,30 @@ UFlowPilotTask();
 
 #### `Setup` 
 Setups Tasks. Called once per FlowPilotExecution, even after restarts.
-
 ```cpp
 virtual void Setup(FFlowContext* InContext);
 ```
 
 #### `Enter` 
 Called when starting this Task. Returns true on success
-
 ```cpp
 virtual bool Enter();
 ```
 
 #### `Tick` 
 Called on Tick. Will success automatically if not implemented by Child classes
-
 ```cpp
 virtual EFPTaskResult Tick(float DeltaTime);
 ```
 
 #### `Exit` 
 Called when Task Finished
-
 ```cpp
 virtual void Exit(EFPTaskResult TaskResult);
 ```
 
 #### `Reset` 
 Resets all Tasks into their Setup States
-
 ```cpp
 virtual void Reset();
 ```
@@ -79,14 +84,12 @@ Sets Task Name
 Get Task Description
 Returns True if Task has Parent Task.
 Returns False if Task is Root Sequence Task
-
 ```cpp
 bool HasParent() const;
 ```
 
 #### `GetParent` 
 Returns Parent Task or nullptr
-
 ```cpp
 UFlowPilotTask* GetParent() const;
 ```
@@ -94,35 +97,18 @@ UFlowPilotTask* GetParent() const;
 #### `IsParent` 
 Sets Parent Task
 Returns True if This task is a FlowPilotParent Task containing children Tasks.
-
 ```cpp
 bool IsParent() const;
 ```
 
 #### `GetAsParent` 
 Returns this Cast to FlowPilotParent task.
-
 ```cpp
 UFlowPilotParent* GetAsParent();
 ```
 
-#### `GetBrush` 
-Returns true if valid. Child Tasks should implement their Validations
-
-```cpp
-virtual FName GetBrush() const;
-```
-
-#### `GetRuntimeDescription` 
-Gathers information to display to debug view about Task.
-
-```cpp
-virtual void GetRuntimeDescription(TArray<FString>& OutLines) const {};
-```
-
 #### `HasStarted` 
 Returns true when Task Started
-
 ```cpp
 UFUNCTION(BlueprintCallable, Category="FlowPilotTask")
 bool HasStarted() const;
@@ -130,7 +116,6 @@ bool HasStarted() const;
 
 #### `IsActive` 
 Returns true when Task in Progress and Not Complete
-
 ```cpp
 UFUNCTION(BlueprintCallable, Category="FlowPilotTask")
 bool IsActive() const;
@@ -138,7 +123,6 @@ bool IsActive() const;
 
 #### `IsComplete` 
 Returns true when Task is Complete
-
 ```cpp
 UFUNCTION(BlueprintCallable, Category="FlowPilotTask")
 bool IsComplete() const;
@@ -146,7 +130,6 @@ bool IsComplete() const;
 
 #### `ForEachActor` 
 Executes 'InFunc' to all Actors found from 'ActorReference'
-
 ```cpp
 bool ForEachActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(AActor* const /*Actor*/)> InFunc) const;
 ```
@@ -154,14 +137,12 @@ bool ForEachActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(A
 #### `ForEachConstActor` 
 Executes 'InFunc' to all const Actors found from 'ActorReference'
 Const means the function should not modify 'Actors'
-
 ```cpp
 bool ForEachConstActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(const AActor* const /*Actor*/)> InFunc) const;
 ```
 
 #### `GetFlowPilotComponent` 
 Returns FlowPilotComponent
-
 ```cpp
 UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 UFlowPilotComponent* GetFlowPilotComponent() const;
@@ -169,7 +150,6 @@ UFlowPilotComponent* GetFlowPilotComponent() const;
 
 #### `GetFlowPilotOwnerActor` 
 Returns FlowPilotComponent Owner Actor
-
 ```cpp
 UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 AActor* GetFlowPilotOwnerActor() const;
@@ -177,7 +157,6 @@ AActor* GetFlowPilotOwnerActor() const;
 
 #### `GetWorldContext` 
 Returns FlowPilot Actor World
-
 ```cpp
 UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 UWorld* GetWorldContext() const;
