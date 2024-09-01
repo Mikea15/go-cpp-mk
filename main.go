@@ -483,6 +483,15 @@ func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 
 	writer.WriteString("- __FileName:__ `" + fileName + "`\n")
 
+	// for i, comm := range info.Comments {
+	// 	isLast := i == max(len(info.Comments)-1, 0)
+	// 	if isLast {
+	// 		writer.WriteString("> " + cleanComment(comm) + " \n")
+	// 	} else {
+	// 		writer.WriteString("> " + cleanComment(comm) + " \\\n")
+	// 	}
+	// }
+
 	writer.WriteString("\n## Properties\n\n")
 	if len(info.Properties) == 0 {
 		writer.WriteString("No properties in this class\n")
