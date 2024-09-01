@@ -40,12 +40,6 @@ __Parent Class:__ `UObject`
 
 ### Functions
 
-#### `UFlowPilotTask` 
-
-```cpp
-UFlowPilotTask();
-```
-
 #### `Setup` 
 Setups Tasks. Called once per FlowPilotExecution, even after restarts.
 ```cpp
@@ -160,11 +154,5 @@ Returns FlowPilot Actor World
 ```cpp
 UFUNCTION(BlueprintCallable, Category = "FlowPilotTask")
 UWorld* GetWorldContext() const;
-```
-
-#### `GetWorld` 
-
-```cpp
-virtual UWorld* GetWorld() const override;
 ```
 

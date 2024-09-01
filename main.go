@@ -38,7 +38,7 @@ type FileOutput struct {
 type ClassInfo struct {
 	Name       string
 	ParentName string
-	Comments   string
+	Comments   []string
 	Properties []PropertyInfo
 	Functions  []FunctionInfo
 }
@@ -46,14 +46,15 @@ type ClassInfo struct {
 type PropertyInfo struct {
 	Macro       string
 	Declaration string
-	Comments    string
+	Comments    []string
 	Access      AccessType
 }
 
 type FunctionInfo struct {
 	Name        string
+	Macro       string
 	Declaration string
-	Comments    string
+	Comments    []string
 	Access      AccessType
 }
 
@@ -118,9 +119,9 @@ func extractInfo(file *os.File) ClassInfo {
 	var info ClassInfo
 	scanner := bufio.NewScanner(file)
 
-	var commentStack string
-	var functionStack string
-	var propertyStack string
+	var commentStack []string = []string{}
+	var fnMacro string = ""
+	var propMacro string = ""
 
 	ignorePrefixList := []string{
 		"};",
@@ -128,7 +129,8 @@ func extractInfo(file *os.File) ClassInfo {
 		"//~UFlowPilotTask",
 	}
 
-	var isProperty = false
+	var ignoreNoDescriptions = true
+
 	var ignoreBlock = false
 	var currentAccessType AccessType = Private
 	var prevId LineId = Empty
@@ -170,11 +172,16 @@ func extractInfo(file *os.File) ClassInfo {
 			continue
 		case Comment:
 			// stack comments
-			commentStack += cleanComment(line) + "\n"
+			commentStack = append(commentStack, line)
 		case Class:
 			if !isClassMacro(line) {
-				info.Comments = strings.TrimSpace(commentStack)
-				commentStack = ""
+
+				if ignoreNoDescriptions && len(commentStack) == 0 {
+					continue
+				}
+
+				info.Comments = commentStack
+				commentStack = []string{}
 
 				var name, parent = extractClassInfo(line)
 				info.Name = name
@@ -183,41 +190,45 @@ func extractInfo(file *os.File) ClassInfo {
 		case Struct:
 
 		case Function:
-			if !isFunctionMacro(line) {
+			if isFunctionMacro(line) {
+				fnMacro = line
+			} else {
+				if ignoreNoDescriptions && len(commentStack) == 0 {
+					continue
+				}
+
 				var data = FunctionInfo{
 					Name:        extractFunctionName(line),
-					Declaration: functionStack + line,
-					Comments:    strings.TrimSpace(commentStack),
+					Macro:       fnMacro,
+					Declaration: line,
+					Comments:    commentStack,
 					Access:      currentAccessType,
 				}
-				commentStack = ""
-				functionStack = ""
+
+				fnMacro = ""
+				commentStack = []string{}
 
 				info.Functions = append(info.Functions, data)
-			} else {
-				functionStack = line + "\n"
 			}
 		case Property:
-			propertyStack = line + "\n"
-
-			if !isPropertyMacro(line) {
-
-				if isProperty {
-					var data = PropertyInfo{
-						Macro:       propertyStack,
-						Declaration: line,
-						Comments:    strings.TrimSpace(commentStack),
-						Access:      currentAccessType,
-					}
-					commentStack = ""
-					propertyStack = ""
-
-					info.Properties = append(info.Properties, data)
-				}
-				isProperty = false
-
+			if isPropertyMacro(line) {
+				propMacro = line
 			} else {
-				isProperty = true
+				if ignoreNoDescriptions && len(commentStack) == 0 {
+					continue
+				}
+
+				var data = PropertyInfo{
+					Macro:       propMacro,
+					Declaration: line,
+					Comments:    commentStack,
+					Access:      currentAccessType,
+				}
+
+				propMacro = ""
+				commentStack = []string{}
+
+				info.Properties = append(info.Properties, data)
 			}
 		case AccessModifier:
 			accessStr := strings.TrimRight(line, ":")
@@ -268,12 +279,12 @@ func idLine(line string, prevId LineId) LineId {
 		return Struct
 	}
 
-	if isFunctionMacro(line) || isFunction(line) {
-		return Function
+	if isPropertyMacro(line) || isProperty(line, prevId == Property) {
+		return Property
 	}
 
-	if isPropertyMacro(line) || isProperty(line) {
-		return Property
+	if isFunctionMacro(line) || isFunction(line, prevId == Function) {
+		return Function
 	}
 
 	if isAccessModifier(line) {
@@ -341,6 +352,7 @@ func cleanComment(line string) (comment string) {
 	comment = strings.TrimLeft(comment, "/*")
 	comment = strings.TrimLeft(comment, "/**")
 	comment = strings.TrimLeft(comment, "*")
+	comment = strings.TrimRight(comment, "*/")
 	comment = strings.TrimSpace(comment)
 	return
 }
@@ -369,7 +381,10 @@ func isPropertyMacro(line string) bool {
 	return strings.HasPrefix(line, "UPROPERTY")
 }
 
-func isProperty(line string) bool {
+func isProperty(line string, prevIsProp bool) bool {
+	if prevIsProp {
+		return true
+	}
 	return !strings.Contains(line, "(") && strings.HasSuffix(line, ";")
 }
 
@@ -377,7 +392,10 @@ func isFunctionMacro(line string) bool {
 	return strings.HasPrefix(line, "UFUNCTION")
 }
 
-func isFunction(line string) bool {
+func isFunction(line string, prevIsFn bool) bool {
+	if prevIsFn {
+		return true
+	}
 	return strings.Contains(line, "(") && strings.Contains(line, ")") && strings.HasSuffix(line, ";")
 }
 
@@ -421,6 +439,15 @@ func keepExistingMarkdown(sourceFile, destFolder string) (existingMarkdown strin
 	return
 }
 
+func accessModifierString(accessType AccessType) string {
+	if accessType == Public {
+		return "Public"
+	} else if accessType == Protected {
+		return "Protected"
+	}
+	return "Private"
+}
+
 func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 	fileName := filepath.Base(sourceFile)
 	outputPath := filepath.Join(destFolder, strings.TrimSuffix(fileName, filepath.Ext(fileName))+".mdx")
@@ -439,7 +466,7 @@ func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 	// Header Page
 	writer.WriteString("---\n")
 	writer.WriteString("title: " + info.Name + "\n")
-	writer.WriteString("description: Reference page for " + info.Name + " class\n")
+	writer.WriteString("description: Reference page for " + info.Name + "\n")
 	writer.WriteString("---\n")
 
 	// Keep Existing Content
@@ -451,24 +478,47 @@ func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 	}
 
 	if info.ParentName != "" {
-		writer.WriteString(fmt.Sprintf("__Parent Class:__ `%s`\n\n", info.ParentName))
+		writer.WriteString(fmt.Sprintf("- __Parent Class:__ `%s`\n", info.ParentName))
 	}
 
-	writer.WriteString("### Properties\n\n")
-	writer.WriteString("| Property | Description |\n")
-	writer.WriteString("| :--- | :--- |\n")
-	for _, prop := range info.Properties {
-		writer.WriteString(fmt.Sprintf("| `%s` | %s |\n", prop.Declaration, prop.Comments))
-	}
-	writer.WriteString("\n")
+	writer.WriteString("- __FileName:__ `" + fileName + "`\n")
 
-	writer.WriteString("### Functions\n\n")
-	for _, function := range info.Functions {
-		if function.Access != Private {
-			writer.WriteString("#### `" + function.Name + "` \n")
-			writer.WriteString(function.Comments + "\n")
+	writer.WriteString("\n## Properties\n\n")
+	if len(info.Properties) == 0 {
+		writer.WriteString("No properties in this class\n")
+	} else {
+		writer.WriteString("```cpp\n")
+		for _, prop := range info.Properties {
+			for i, comm := range prop.Comments {
+				isLast := i == max(len(prop.Comments)-1, 0)
+				if isLast {
+					writer.WriteString("// " + cleanComment(comm) + " \n")
+				} else {
+					writer.WriteString("// " + cleanComment(comm) + "\\ \n")
+				}
+			}
+			writer.WriteString(prop.Macro + "\n")
+			writer.WriteString(prop.Declaration + "\n\n")
+		}
+		writer.WriteString("```\n")
+	}
+
+	writer.WriteString("\n## Functions\n\n")
+	if len(info.Functions) == 0 {
+		writer.WriteString("No functions in this class\n")
+	} else {
+		for _, function := range info.Functions {
+			writer.WriteString("### `" + function.Name + "`\n")
+			for i, comm := range function.Comments {
+				isLast := i == max(len(function.Comments)-1, 0)
+				if isLast {
+					writer.WriteString("> " + cleanComment(comm) + " \n")
+				} else {
+					writer.WriteString("> " + cleanComment(comm) + " \\\n")
+				}
+			}
 			writer.WriteString("```cpp\n")
-			writer.WriteString(function.Declaration + "\n")
+			writer.WriteString(function.Declaration + "\n\n")
 			writer.WriteString("```\n\n")
 		}
 	}
