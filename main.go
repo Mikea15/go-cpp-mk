@@ -149,7 +149,7 @@ func extractInfo(file *os.File) ClassInfo {
 
 		id := idLine(line, prevId)
 
-		fmt.Printf("[%d][%d][%d] %s\n", id, currentAccessType, ignoreBlock, line)
+		// fmt.Printf("[%d][%d][%d] %s\n", id, currentAccessType, ignoreBlock, line)
 
 		if ignoreBlock && id == CloseIgnore {
 			ignoreBlock = false
@@ -391,7 +391,7 @@ func keepExistingMarkdown(sourceFile, destFolder string) (existingMarkdown strin
 
 	file, err := os.Open(outputPath)
 	if err != nil {
-		fmt.Printf("Error opening output file %s: %v\n", outputPath, err)
+		fmt.Printf("Could not open file %s: %v. Will be created as new\n", outputPath, err)
 		return
 	}
 	defer file.Close()
