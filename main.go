@@ -20,6 +20,7 @@ const (
 	AccessModifier
 	OpenIgnore
 	CloseIgnore
+	ClassClose
 )
 
 type AccessType int
@@ -30,9 +31,14 @@ const (
 	Private
 )
 
-type FileOutput struct {
-	Path string
-	Name string
+type EnumProp struct {
+	Comment     string
+	Declaration string
+}
+
+type EnumInfo struct {
+	Name         string
+	PropertyInfo []EnumProp
 }
 
 type ClassInfo struct {
@@ -41,6 +47,7 @@ type ClassInfo struct {
 	Comments   []string
 	Properties []PropertyInfo
 	Functions  []FunctionInfo
+	IsStruct   bool
 }
 
 type PropertyInfo struct {
@@ -58,6 +65,13 @@ type FunctionInfo struct {
 	Access      AccessType
 }
 
+type FileInfo struct {
+	Path    string
+	Name    string
+	Classes []ClassInfo
+	Enums   []EnumInfo
+}
+
 func main() {
 	if len(os.Args) != 3 {
 		fmt.Println("Usage: program <source_folder> <destination_folder>")
@@ -67,7 +81,7 @@ func main() {
 	sourceFolder := os.Args[1]
 	destFolder := os.Args[2]
 
-	var fileList []FileOutput
+	var fileInfoList []FileInfo
 
 	err := filepath.Walk(sourceFolder, func(path string, info os.FileInfo, err error) error {
 
@@ -80,15 +94,21 @@ func main() {
 		}
 
 		if strings.HasSuffix(info.Name(), ".h") || strings.HasSuffix(info.Name(), ".hpp") {
-			fOutput := FileOutput{path, info.Name()}
-			fileList = append(fileList, fOutput)
+			fOutput := FileInfo{
+				path,
+				info.Name(),
+				[]ClassInfo{},
+				[]EnumInfo{},
+			}
+
+			fileInfoList = append(fileInfoList, fOutput)
 		}
 
 		return nil
 	})
 
-	for i := 0; i < len(fileList); i++ {
-		processFile(fileList[i].Path, destFolder, i)
+	for i := 0; i < len(fileInfoList); i++ {
+		processFile(&fileInfoList[i], destFolder, i)
 	}
 
 	if err != nil {
@@ -96,35 +116,51 @@ func main() {
 	}
 }
 
-func processFile(filePath, destFolder string, fileIndex int) {
-	file, err := os.Open(filePath)
+func processFile(fileInfo *FileInfo, destFolder string, fileIndex int) {
+	file, err := os.Open(fileInfo.Path)
 	if err != nil {
-		fmt.Printf("Error opening file %s: %v\n", filePath, err)
+		fmt.Printf("Error opening file %s: %v\n", fileInfo.Path, err)
 		return
 	}
 	defer file.Close()
 
-	classInfo := extractInfo(file)
-	if classInfo.Name == "" {
-		fmt.Printf("No class found in file %s\n", filePath)
+	extractInfo(file, fileInfo)
+	if fileInfo.Name == "" {
+		fmt.Printf("No class found in file %s\n", fileInfo.Path)
 		return
 	}
 
-	// classInfo.FileIndex = fileIndex
-
-	outputMarkdown(classInfo, filePath, destFolder)
+	outputMarkdown(fileInfo, destFolder)
 }
 
-func extractInfo(file *os.File) ClassInfo {
-	var info ClassInfo
+type IntStack []int
+
+func (s *IntStack) Push(v int) {
+	*s = append(*s, v)
+}
+
+func (s *IntStack) Pop() int {
+	res := (*s)[len(*s)-1]
+	*s = (*s)[:len(*s)-1]
+	return res
+}
+
+func (s *IntStack) Top() int {
+	if len(*s) >= 0 {
+		return (*s)[len(*s)-1]
+	}
+	return -1
+}
+
+func extractInfo(file *os.File, fileInfo *FileInfo) {
 	scanner := bufio.NewScanner(file)
 
+	var currentClassIndex IntStack = IntStack{}
 	var commentStack []string = []string{}
 	var fnMacro string = ""
 	var propMacro string = ""
 
 	ignorePrefixList := []string{
-		"};",
 		"// UFlowPilotTask",
 		"//~UFlowPilotTask",
 	}
@@ -173,6 +209,10 @@ func extractInfo(file *os.File) ClassInfo {
 		case Comment:
 			// stack comments
 			commentStack = append(commentStack, line)
+		case ClassClose:
+			if currentClassIndex.Top() > 0 {
+				currentClassIndex.Pop()
+			}
 		case Class:
 			if !isClassMacro(line) {
 
@@ -180,15 +220,39 @@ func extractInfo(file *os.File) ClassInfo {
 					continue
 				}
 
-				info.Comments = commentStack
-				commentStack = []string{}
-
 				var name, parent = extractClassInfo(line)
-				info.Name = name
-				info.ParentName = parent
+
+				var info = ClassInfo{
+					Name:       name,
+					ParentName: parent,
+					Comments:   commentStack,
+					IsStruct:   false,
+				}
+				fileInfo.Classes = append(fileInfo.Classes, info)
+				currentClassIndex.Push(len(fileInfo.Classes) - 1)
+
+				commentStack = []string{}
 			}
 		case Struct:
+			if !isStructMacro(line) {
 
+				if ignoreNoDescriptions && len(commentStack) == 0 {
+					continue
+				}
+
+				var name, parent = extractClassInfo(line)
+
+				var info = ClassInfo{
+					Name:       name,
+					ParentName: parent,
+					Comments:   commentStack,
+					IsStruct:   true,
+				}
+				fileInfo.Classes = append(fileInfo.Classes, info)
+				currentClassIndex.Push(len(fileInfo.Classes) - 1)
+
+				commentStack = []string{}
+			}
 		case Function:
 			if isFunctionMacro(line) {
 				fnMacro = line
@@ -208,7 +272,7 @@ func extractInfo(file *os.File) ClassInfo {
 				fnMacro = ""
 				commentStack = []string{}
 
-				info.Functions = append(info.Functions, data)
+				fileInfo.Classes[currentClassIndex.Top()].Functions = append(fileInfo.Classes[currentClassIndex.Top()].Functions, data)
 			}
 		case Property:
 			if isPropertyMacro(line) {
@@ -228,7 +292,7 @@ func extractInfo(file *os.File) ClassInfo {
 				propMacro = ""
 				commentStack = []string{}
 
-				info.Properties = append(info.Properties, data)
+				fileInfo.Classes[currentClassIndex.Top()].Properties = append(fileInfo.Classes[currentClassIndex.Top()].Properties, data)
 			}
 		case AccessModifier:
 			accessStr := strings.TrimRight(line, ":")
@@ -249,8 +313,6 @@ func extractInfo(file *os.File) ClassInfo {
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
 	}
-
-	return info
 }
 
 func idLine(line string, prevId LineId) LineId {
@@ -265,6 +327,10 @@ func idLine(line string, prevId LineId) LineId {
 
 	if isCloseIgnore(line) {
 		return CloseIgnore
+	}
+
+	if isClassCloseBracket(line) {
+		return ClassClose
 	}
 
 	if isComment(line, prevId == Comment) {
@@ -392,6 +458,10 @@ func isFunctionMacro(line string) bool {
 	return strings.HasPrefix(line, "UFUNCTION")
 }
 
+func isClassCloseBracket(line string) bool {
+	return strings.EqualFold(line, "};")
+}
+
 func isFunction(line string, prevIsFn bool) bool {
 	if prevIsFn {
 		return true
@@ -448,11 +518,11 @@ func accessModifierString(accessType AccessType) string {
 	return "Private"
 }
 
-func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
-	fileName := filepath.Base(sourceFile)
+func outputMarkdown(fileInfo *FileInfo, destFolder string) {
+	fileName := filepath.Base(fileInfo.Path)
 	outputPath := filepath.Join(destFolder, strings.TrimSuffix(fileName, filepath.Ext(fileName))+".mdx")
 
-	var keepContent, hasDefinitionHeader = keepExistingMarkdown(sourceFile, destFolder)
+	var keepContent, hasDefinitionHeader = keepExistingMarkdown(fileInfo.Path, destFolder)
 
 	file, err := os.Create(outputPath)
 	if err != nil {
@@ -465,8 +535,8 @@ func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 
 	// Header Page
 	writer.WriteString("---\n")
-	writer.WriteString("title: " + info.Name + "\n")
-	writer.WriteString("description: Reference page for " + info.Name + "\n")
+	writer.WriteString("title: " + fileInfo.Name + "\n")
+	writer.WriteString("description: Reference page for " + fileInfo.Name + "\n")
 	writer.WriteString("---\n")
 
 	// Keep Existing Content
@@ -474,61 +544,64 @@ func outputMarkdown(info ClassInfo, sourceFile, destFolder string) {
 
 	// Go on to Autogenerated Content
 	if !hasDefinitionHeader {
-		writer.WriteString("\n## Class Info\n\n")
+		writer.WriteString("\n## File Info\n\n")
 	}
 
-	if info.ParentName != "" {
-		writer.WriteString(fmt.Sprintf("- __Parent Class:__ `%s`\n", info.ParentName))
+	for _, class := range fileInfo.Classes {
+		writer.WriteString(fmt.Sprintf("- [`" + class.Name + "`](#" + class.Name + ") \n\n"))
 	}
 
-	writer.WriteString("- __FileName:__ `" + fileName + "`\n")
+	for _, class := range fileInfo.Classes {
+		writer.WriteString(fmt.Sprintf("### `" + class.Name + "` \n\n"))
 
-	// for i, comm := range info.Comments {
-	// 	isLast := i == max(len(info.Comments)-1, 0)
-	// 	if isLast {
-	// 		writer.WriteString("> " + cleanComment(comm) + " \n")
-	// 	} else {
-	// 		writer.WriteString("> " + cleanComment(comm) + " \\\n")
-	// 	}
-	// }
-
-	writer.WriteString("\n## Properties\n\n")
-	if len(info.Properties) == 0 {
-		writer.WriteString("No properties in this class\n")
-	} else {
-		writer.WriteString("```cpp\n")
-		for _, prop := range info.Properties {
-			for i, comm := range prop.Comments {
-				isLast := i == max(len(prop.Comments)-1, 0)
-				if isLast {
-					writer.WriteString("// " + cleanComment(comm) + " \n")
-				} else {
-					writer.WriteString("// " + cleanComment(comm) + "\\ \n")
-				}
-			}
-			writer.WriteString(prop.Macro + "\n")
-			writer.WriteString(prop.Declaration + "\n\n")
+		if class.ParentName != "" {
+			writer.WriteString(fmt.Sprintf("- __Parent Class:__ `%s`\n", class.ParentName))
 		}
-		writer.WriteString("```\n")
-	}
 
-	writer.WriteString("\n## Functions\n\n")
-	if len(info.Functions) == 0 {
-		writer.WriteString("No functions in this class\n")
-	} else {
-		for _, function := range info.Functions {
-			writer.WriteString("### `" + function.Name + "`\n")
-			for i, comm := range function.Comments {
-				isLast := i == max(len(function.Comments)-1, 0)
-				if isLast {
-					writer.WriteString("> " + cleanComment(comm) + " \n")
-				} else {
-					writer.WriteString("> " + cleanComment(comm) + " \\\n")
-				}
-			}
+		writer.WriteString("- __FileName:__ `" + fileName + "`\n")
+
+		// for i, comm := range info.Comments {
+		// 	isLast := i == max(len(info.Comments)-1, 0)
+		// 	if isLast {
+		// 		writer.WriteString("> " + cleanComment(comm) + " \n")
+		// 	} else {
+		// 		writer.WriteString("> " + cleanComment(comm) + " \\\n")
+		// 	}
+		// }
+
+		writer.WriteString("\n## Properties\n\n")
+		if len(class.Properties) == 0 {
+			writer.WriteString("No documented properties available\n")
+		} else {
 			writer.WriteString("```cpp\n")
-			writer.WriteString(function.Declaration + "\n\n")
-			writer.WriteString("```\n\n")
+			for _, prop := range class.Properties {
+				for _, comm := range prop.Comments {
+					writer.WriteString("// " + cleanComment(comm) + " \n")
+				}
+				writer.WriteString(prop.Macro + "\n")
+				writer.WriteString(prop.Declaration + "\n\n")
+			}
+			writer.WriteString("```\n")
+		}
+
+		writer.WriteString("\n## Functions\n\n")
+		if len(class.Functions) == 0 {
+			writer.WriteString("No documented functions available\n")
+		} else {
+			for _, function := range class.Functions {
+				writer.WriteString("### `" + function.Name + "`\n")
+				for i, comm := range function.Comments {
+					isLast := i == max(len(function.Comments)-1, 0)
+					if isLast {
+						writer.WriteString("> " + cleanComment(comm) + " \n")
+					} else {
+						writer.WriteString("> " + cleanComment(comm) + " \\\n")
+					}
+				}
+				writer.WriteString("```cpp\n")
+				writer.WriteString(function.Declaration + "\n\n")
+				writer.WriteString("```\n\n")
+			}
 		}
 	}
 

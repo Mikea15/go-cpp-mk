@@ -169,3 +169,25 @@ protected:
 	friend class FFlowPilotViewModel; 
 #endif
 };
+
+// Class 2
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced, CollapseCategories, AutoExpandCategories=("FlowPilot"))
+class FLOWPILOT_API UFlowPilotTask2 : public UObject
+{
+	// Setups Tasks. Called once per FlowPilotExecution, even after restarts.
+	virtual void Setup(FFlowContext* InContext);
+	
+	// Called when starting this Task. Returns true on success
+	virtual bool Enter();
+};
+
+// Class 3
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced, CollapseCategories, AutoExpandCategories=("FlowPilot"))
+class FLOWPILOT_API UFlowPilotTask3 : public UObject
+{
+	// Setups Tasks. Called once per FlowPilotExecution, even after restarts.
+	virtual void Setup(FFlowContext* InContext);
+	
+	// Called when starting this Task. Returns true on success
+	virtual bool Enter();
+};
