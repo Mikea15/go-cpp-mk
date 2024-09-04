@@ -15,12 +15,14 @@ const (
 	Comment
 	Class
 	Struct
+	Enum
 	Function
 	Property
 	AccessModifier
 	OpenIgnore
 	CloseIgnore
-	ClassClose
+	OpenBracket
+	CloseBracket
 )
 
 type AccessType int
@@ -31,23 +33,21 @@ const (
 	Private
 )
 
-type EnumProp struct {
-	Comment     string
-	Declaration string
-}
+// type DataType int
+// const (
+// 	Class = iota
+// 	Struct
+// 	Enum
+// )
 
-type EnumInfo struct {
-	Name         string
-	PropertyInfo []EnumProp
-}
-
-type ClassInfo struct {
+type DataInfo struct {
 	Name       string
-	ParentName string
+	Parents    []string
 	Comments   []string
 	Properties []PropertyInfo
 	Functions  []FunctionInfo
 	IsStruct   bool
+	IsEnum     bool
 }
 
 type PropertyInfo struct {
@@ -66,10 +66,9 @@ type FunctionInfo struct {
 }
 
 type FileInfo struct {
-	Path    string
-	Name    string
-	Classes []ClassInfo
-	Enums   []EnumInfo
+	Path string
+	Name string
+	Data []DataInfo
 }
 
 func main() {
@@ -80,6 +79,11 @@ func main() {
 
 	sourceFolder := os.Args[1]
 	destFolder := os.Args[2]
+
+	ignoreFiles := []string{
+		"FlowPilotModule.h",
+		"FlowPilotCustomVersion.h",
+	}
 
 	var fileInfoList []FileInfo
 
@@ -94,14 +98,24 @@ func main() {
 		}
 
 		if strings.HasSuffix(info.Name(), ".h") || strings.HasSuffix(info.Name(), ".hpp") {
-			fOutput := FileInfo{
-				path,
-				info.Name(),
-				[]ClassInfo{},
-				[]EnumInfo{},
+
+			skipFile := false
+			for _, ignore := range ignoreFiles {
+				if ignore == info.Name() {
+					skipFile = true
+					break
+				}
 			}
 
-			fileInfoList = append(fileInfoList, fOutput)
+			if !skipFile {
+				fOutput := FileInfo{
+					path,
+					info.Name(),
+					[]DataInfo{},
+				}
+
+				fileInfoList = append(fileInfoList, fOutput)
+			}
 		}
 
 		return nil
@@ -125,31 +139,13 @@ func processFile(fileInfo *FileInfo, destFolder string, fileIndex int) {
 	defer file.Close()
 
 	extractInfo(file, fileInfo)
+
 	if fileInfo.Name == "" {
 		fmt.Printf("No class found in file %s\n", fileInfo.Path)
 		return
 	}
 
 	outputMarkdown(fileInfo, destFolder)
-}
-
-type IntStack []int
-
-func (s *IntStack) Push(v int) {
-	*s = append(*s, v)
-}
-
-func (s *IntStack) Pop() int {
-	res := (*s)[len(*s)-1]
-	*s = (*s)[:len(*s)-1]
-	return res
-}
-
-func (s *IntStack) Top() int {
-	if len(*s) >= 0 {
-		return (*s)[len(*s)-1]
-	}
-	return -1
 }
 
 func extractInfo(file *os.File, fileInfo *FileInfo) {
@@ -164,8 +160,6 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 		"// UFlowPilotTask",
 		"//~UFlowPilotTask",
 	}
-
-	var ignoreNoDescriptions = true
 
 	var ignoreBlock = false
 	var currentAccessType AccessType = Private
@@ -209,47 +203,52 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 		case Comment:
 			// stack comments
 			commentStack = append(commentStack, line)
-		case ClassClose:
-			if currentClassIndex.Top() > 0 {
-				currentClassIndex.Pop()
+		case CloseBracket:
+			currentClassIndex.Pop()
+		case OpenBracket:
+
+		case Enum:
+			if !isEnumMacro(line) {
+				var name = extractEnumInfo(line)
+				var info = DataInfo{
+					Name:     name,
+					IsStruct: false,
+					IsEnum:   true,
+				}
+				fileInfo.Data = append(fileInfo.Data, info)
+				currentClassIndex.Push(len(fileInfo.Data) - 1)
+
+				commentStack = []string{}
 			}
 		case Class:
 			if !isClassMacro(line) {
+				var name, parents, _ = extractClassInfo(line)
 
-				if ignoreNoDescriptions && len(commentStack) == 0 {
-					continue
+				var info = DataInfo{
+					Name:     name,
+					Parents:  parents,
+					Comments: commentStack,
+					IsStruct: false,
+					IsEnum:   false,
 				}
-
-				var name, parent = extractClassInfo(line)
-
-				var info = ClassInfo{
-					Name:       name,
-					ParentName: parent,
-					Comments:   commentStack,
-					IsStruct:   false,
-				}
-				fileInfo.Classes = append(fileInfo.Classes, info)
-				currentClassIndex.Push(len(fileInfo.Classes) - 1)
+				fileInfo.Data = append(fileInfo.Data, info)
+				currentClassIndex.Push(len(fileInfo.Data) - 1)
 
 				commentStack = []string{}
 			}
 		case Struct:
 			if !isStructMacro(line) {
+				var name, parents, _ = extractStructInfo(line)
 
-				if ignoreNoDescriptions && len(commentStack) == 0 {
-					continue
+				var info = DataInfo{
+					Name:     name,
+					Parents:  parents,
+					Comments: commentStack,
+					IsStruct: true,
+					IsEnum:   false,
 				}
-
-				var name, parent = extractClassInfo(line)
-
-				var info = ClassInfo{
-					Name:       name,
-					ParentName: parent,
-					Comments:   commentStack,
-					IsStruct:   true,
-				}
-				fileInfo.Classes = append(fileInfo.Classes, info)
-				currentClassIndex.Push(len(fileInfo.Classes) - 1)
+				fileInfo.Data = append(fileInfo.Data, info)
+				currentClassIndex.Push(len(fileInfo.Data) - 1)
 
 				commentStack = []string{}
 			}
@@ -257,10 +256,6 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 			if isFunctionMacro(line) {
 				fnMacro = line
 			} else {
-				if ignoreNoDescriptions && len(commentStack) == 0 {
-					continue
-				}
-
 				var data = FunctionInfo{
 					Name:        extractFunctionName(line),
 					Macro:       fnMacro,
@@ -272,16 +267,12 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 				fnMacro = ""
 				commentStack = []string{}
 
-				fileInfo.Classes[currentClassIndex.Top()].Functions = append(fileInfo.Classes[currentClassIndex.Top()].Functions, data)
+				fileInfo.Data[currentClassIndex.Top()].Functions = append(fileInfo.Data[currentClassIndex.Top()].Functions, data)
 			}
 		case Property:
 			if isPropertyMacro(line) {
 				propMacro = line
 			} else {
-				if ignoreNoDescriptions && len(commentStack) == 0 {
-					continue
-				}
-
 				var data = PropertyInfo{
 					Macro:       propMacro,
 					Declaration: line,
@@ -292,7 +283,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 				propMacro = ""
 				commentStack = []string{}
 
-				fileInfo.Classes[currentClassIndex.Top()].Properties = append(fileInfo.Classes[currentClassIndex.Top()].Properties, data)
+				fileInfo.Data[currentClassIndex.Top()].Properties = append(fileInfo.Data[currentClassIndex.Top()].Properties, data)
 			}
 		case AccessModifier:
 			accessStr := strings.TrimRight(line, ":")
@@ -329,8 +320,12 @@ func idLine(line string, prevId LineId) LineId {
 		return CloseIgnore
 	}
 
-	if isClassCloseBracket(line) {
-		return ClassClose
+	if isCloseBracket(line) {
+		return CloseBracket
+	}
+
+	if isOpenBracket(line) {
+		return OpenBracket
 	}
 
 	if isComment(line, prevId == Comment) {
@@ -343,6 +338,10 @@ func idLine(line string, prevId LineId) LineId {
 
 	if isStructMacro(line) || isStruct(line) {
 		return Struct
+	}
+
+	if isEnumMacro(line) || isEnum(line) {
+		return Enum
 	}
 
 	if isPropertyMacro(line) || isProperty(line, prevId == Property) {
@@ -382,15 +381,73 @@ func isComment(line string, prevIsComment bool) bool {
 	return strings.HasPrefix(line, "/*") || strings.HasPrefix(line, "//")
 }
 
-func extractClassInfo(line string) (class, parent string) {
+func extractClassInfo(line string) (class string, parent []string, foundClassOpenBracket bool) {
 	parts := strings.Fields(line)
-	if len(parts) > 1 {
-		if strings.Contains(parts[1], "_API") {
-			class = strings.TrimSpace(parts[2])
+	foundParentDelimiter := false
+	foundClassOpenBracket = false
+	for _, part := range parts {
+		if strings.HasPrefix(part, "class") || strings.Contains(part, "_API") {
+			continue
+		}
+		if strings.HasPrefix(part, "public") || strings.HasPrefix(part, "private") || strings.HasPrefix(part, "protected") {
+			continue
+		}
+		if strings.HasPrefix(part, ":") {
+			foundParentDelimiter = true
+			continue
+		}
+		if strings.HasPrefix(part, "U") || strings.HasPrefix(part, "I") {
+			if foundParentDelimiter {
+				parent = append(parent, part)
+			} else {
+				class = part
+			}
+		}
+		if isOpenBracket(part) {
+			foundClassOpenBracket = true
+		}
+	}
+	return
+}
+
+func extractStructInfo(line string) (class string, parent []string, foundClassOpenBracket bool) {
+	parts := strings.Fields(line)
+	foundParentDelimiter := false
+	foundClassOpenBracket = false
+	for _, part := range parts {
+		if strings.HasPrefix(part, "struct") || strings.Contains(part, "_API") {
+			continue
+		}
+		if strings.HasPrefix(part, "public") || strings.HasPrefix(part, "private") || strings.HasPrefix(part, "protected") {
+			continue
+		}
+		if strings.HasPrefix(part, ":") {
+			foundParentDelimiter = true
+			continue
+		}
+		if strings.HasPrefix(part, "F") {
+			if foundParentDelimiter {
+				parent = append(parent, part)
+			} else {
+				class = part
+			}
+		}
+		if isOpenBracket(part) {
+			foundClassOpenBracket = true
+		}
+	}
+	return
+}
+
+func extractEnumInfo(line string) (name string) {
+	parts := strings.Fields(line)
+	for _, part := range parts {
+		if strings.HasPrefix(part, "enum") || strings.HasPrefix(part, "class") {
+			continue
 		}
 
-		if len(parts) > 3 && parts[3] == ":" {
-			parent = strings.TrimSpace(parts[5])
+		if strings.HasPrefix(part, "E") {
+			name = part
 		}
 	}
 	return
@@ -435,6 +492,14 @@ func isClass(line string) bool {
 	return strings.HasPrefix(line, "class")
 }
 
+func isEnumMacro(line string) bool {
+	return strings.HasPrefix(line, "UENUM")
+}
+
+func isEnum(line string) bool {
+	return strings.HasPrefix(line, "enum")
+}
+
 func isStructMacro(line string) bool {
 	return strings.HasPrefix(line, "USTRUCT")
 }
@@ -458,7 +523,11 @@ func isFunctionMacro(line string) bool {
 	return strings.HasPrefix(line, "UFUNCTION")
 }
 
-func isClassCloseBracket(line string) bool {
+func isOpenBracket(line string) bool {
+	return strings.EqualFold(line, "{")
+}
+
+func isCloseBracket(line string) bool {
 	return strings.EqualFold(line, "};")
 }
 
@@ -497,7 +566,7 @@ func keepExistingMarkdown(sourceFile, destFolder string) (existingMarkdown strin
 
 		existingMarkdown += line + "\n"
 
-		if strings.Contains(line, "## Class Info") {
+		if strings.Contains(line, "## File Info") {
 			hasDefinitionHeader = true
 			i++
 			break
@@ -547,18 +616,18 @@ func outputMarkdown(fileInfo *FileInfo, destFolder string) {
 		writer.WriteString("\n## File Info\n\n")
 	}
 
-	for _, class := range fileInfo.Classes {
-		writer.WriteString(fmt.Sprintf("- [`" + class.Name + "`](#" + class.Name + ") \n\n"))
+	writer.WriteString("\n __FileName:__ `" + fileName + "`\n\n")
+
+	for _, class := range fileInfo.Data {
+		writer.WriteString(fmt.Sprintf("- [`" + class.Name + "`](#" + class.Name + ") \n"))
 	}
 
-	for _, class := range fileInfo.Classes {
-		writer.WriteString(fmt.Sprintf("### `" + class.Name + "` \n\n"))
+	for _, class := range fileInfo.Data {
+		writer.WriteString(fmt.Sprintf("\n### `" + class.Name + "` \n\n"))
 
-		if class.ParentName != "" {
-			writer.WriteString(fmt.Sprintf("- __Parent Class:__ `%s`\n", class.ParentName))
+		for _, parent := range class.Parents {
+			writer.WriteString(fmt.Sprintf("- __Parent Class:__ `%s`\n", parent))
 		}
-
-		writer.WriteString("- __FileName:__ `" + fileName + "`\n")
 
 		// for i, comm := range info.Comments {
 		// 	isLast := i == max(len(info.Comments)-1, 0)

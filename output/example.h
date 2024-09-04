@@ -172,7 +172,7 @@ protected:
 
 // Class 2
 UCLASS(Abstract, EditInlineNew, DefaultToInstanced, CollapseCategories, AutoExpandCategories=("FlowPilot"))
-class FLOWPILOT_API UFlowPilotTask2 : public UObject
+class FLOWPILOT_API UFlowPilotTask2 : public UObject, USomeOtherClass, Interface
 {
 	// Setups Tasks. Called once per FlowPilotExecution, even after restarts.
 	virtual void Setup(FFlowContext* InContext);

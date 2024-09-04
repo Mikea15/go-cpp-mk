@@ -26,17 +26,65 @@ Tasks can also be cancelled, and end directly.
 
 Each class that can be implemented need to override a couple of virtual methods exposed by this task, either in Cpp or implementing the Blueprint versions when creating a `UFlowPilotTask` via blueprint.
 
-## Class Info
+## File Info
+
+ __FileName:__ `example.h`
+
+- [`FFlowContext;`](#FFlowContext;) 
+- [`FFlowActorReference;`](#FFlowActorReference;) 
+- [`UFlowPilotComponent;`](#UFlowPilotComponent;) 
+- [`UFlowPilotParent;`](#UFlowPilotParent;) 
 - [`UFlowPilotTask`](#UFlowPilotTask) 
-
 - [`UFlowPilotTask2`](#UFlowPilotTask2) 
-
 - [`UFlowPilotTask3`](#UFlowPilotTask3) 
+
+### `FFlowContext;` 
+
+
+## Properties
+
+No documented properties available
+
+## Functions
+
+No documented functions available
+
+### `FFlowActorReference;` 
+
+
+## Properties
+
+No documented properties available
+
+## Functions
+
+No documented functions available
+
+### `UFlowPilotComponent;` 
+
+
+## Properties
+
+No documented properties available
+
+## Functions
+
+No documented functions available
+
+### `UFlowPilotParent;` 
+
+
+## Properties
+
+No documented properties available
+
+## Functions
+
+No documented functions available
 
 ### `UFlowPilotTask` 
 
 - __Parent Class:__ `UObject`
-- __FileName:__ `example.h`
 
 ## Properties
 
@@ -57,9 +105,21 @@ uint8 bEnabled: 1;
 UPROPERTY()
 UFlowPilotTask* Parent = nullptr;
 
+
+const FFlowContext* Context = nullptr;
+
+
+EFPInternalTaskState InternalState;
+
 ```
 
 ## Functions
+
+### `UFlowPilotTask`
+```cpp
+UFlowPilotTask();
+
+```
 
 ### `Setup`
 > Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
@@ -167,6 +227,12 @@ bool ForEachConstActor(const FFlowActorReference& ActorReference, TFunctionRef<b
 
 ```
 
+### `INVALID METHOD NAME`
+```cpp
+protected:
+
+```
+
 ### `GetFlowPilotComponent`
 > Returns FlowPilotComponent 
 ```cpp
@@ -188,10 +254,24 @@ UWorld* GetWorldContext() const;
 
 ```
 
+### `GetWorld`
+```cpp
+virtual UWorld* GetWorld() const override;
+
+```
+
+### `INVALID METHOD NAME`
+```cpp
+protected:
+
+```
+
+
 ### `UFlowPilotTask2` 
 
-- __Parent Class:__ `UObject`
-- __FileName:__ `example.h`
+- __Parent Class:__ `UObject,`
+- __Parent Class:__ `USomeOtherClass,`
+- __Parent Class:__ `Interface`
 
 ## Properties
 
@@ -213,10 +293,10 @@ virtual bool Enter();
 
 ```
 
+
 ### `UFlowPilotTask3` 
 
 - __Parent Class:__ `UObject`
-- __FileName:__ `example.h`
 
 ## Properties
 
