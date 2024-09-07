@@ -1,0 +1,268 @@
+---
+title: example.h
+description: Reference page for example.h
+---
+
+import Ref from '../../../components/Ref.astro'
+
+import { Image } from 'astro:assets';
+import schema from '../../../assets/uflowpilottask_executionflow.png';
+
+<Ref c="UFlowPilotTask" p="UObject" />
+
+## Description
+
+<Image src={schema} alt="UFlowPilotTask Schema" />
+
+`UFlowPilotTask` is the base class for all Tasks that can run in FlowPilot.
+
+The schema above shows succintely how it works.
+
+Each Tasks starts its execution by calling their `Enter()` methods. They can either succeed or fail at this stage.
+Upon failing, the task ends. If succeeded, `Tick` is then called and we check the Task Result ( InProgress, Succeeded, Failed, Error ).
+If the Task returns `Succeeded` the `Exit()` method is called.
+
+Tasks can also be cancelled, and end directly.
+
+Each class that can be implemented need to override a couple of virtual methods exposed by this task, either in Cpp or implementing the Blueprint versions when creating a `UFlowPilotTask` via blueprint.
+
+## File Info
+
+ __FileName:__ `example.h`
+
+ __Class List:__ 
+[ [`UFlowPilotTask`](#UFlowPilotTask) | [`UFlowPilotTask2`](#UFlowPilotTask2) | [`UFlowPilotTask3`](#UFlowPilotTask3) ]
+### `UFlowPilotTask` 
+
+__Parent Classes:__
+[ `UObject` ]
+## Properties
+
+```cpp
+// Task name 
+UPROPERTY(EditDefaultsOnly, Category = "Task Options")
+FName TaskName = {};
+
+// Task description 
+UPROPERTY(EditDefaultsOnly, Category = "Task Options")
+FName Description = {};
+
+// If False, Will skip this Task's execution 
+UPROPERTY(EditDefaultsOnly, Category = "Task Options")
+uint8 bEnabled: 1;
+
+// Parent Task 
+UPROPERTY()
+UFlowPilotTask* Parent = nullptr;
+
+
+const FFlowContext* Context = nullptr;
+
+
+EFPInternalTaskState InternalState;
+
+```
+
+## Functions
+
+### `UFlowPilotTask`
+```cpp
+UFlowPilotTask();
+
+```
+
+### `Setup`
+> Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
+```cpp
+virtual void Setup(FFlowContext* InContext);
+
+```
+
+### `Enter`
+> Called when starting this Task. Returns true on success 
+```cpp
+virtual bool Enter();
+
+```
+
+### `Tick`
+> Called on Tick. Will success automatically if not implemented by Child classes 
+```cpp
+virtual EFPTaskResult Tick(float DeltaTime);
+
+```
+
+### `Exit`
+> Called when Task Finished 
+```cpp
+virtual void Exit(EFPTaskResult TaskResult);
+
+```
+
+### `Reset`
+> Resets all Tasks into their Setup States 
+```cpp
+virtual void Reset();
+
+```
+
+### `HasParent`
+> Disabled Tasks are skipped during execution \
+> Enables or Disables Task. Disabled Tasks will be skipped. \
+> Returns Task Name \
+> Sets Task Name \
+> Get Task Description \
+> Returns True if Task has Parent Task. \
+> Returns False if Task is Root Sequence Task 
+```cpp
+bool HasParent() const;
+
+```
+
+### `GetParent`
+> Returns Parent Task or nullptr 
+```cpp
+UFlowPilotTask* GetParent() const;
+
+```
+
+### `IsParent`
+> Sets Parent Task \
+> Returns True if This task is a FlowPilotParent Task containing children Tasks. 
+```cpp
+bool IsParent() const;
+
+```
+
+### `GetAsParent`
+> Returns this Cast to FlowPilotParent task. 
+```cpp
+UFlowPilotParent* GetAsParent();
+
+```
+
+### `HasStarted`
+> Returns true when Task Started 
+```cpp
+bool HasStarted() const;
+
+```
+
+### `IsActive`
+> Returns true when Task in Progress and Not Complete 
+```cpp
+bool IsActive() const;
+
+```
+
+### `IsComplete`
+> Returns true when Task is Complete 
+```cpp
+bool IsComplete() const;
+
+```
+
+### `ForEachActor`
+> Executes 'InFunc' to all Actors found from 'ActorReference' 
+```cpp
+bool ForEachActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(AActor* const /*Actor*/)> InFunc) const;
+
+```
+
+### `ForEachConstActor`
+> Executes 'InFunc' to all const Actors found from 'ActorReference' \
+> Const means the function should not modify 'Actors' 
+```cpp
+bool ForEachConstActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(const AActor* const /*Actor*/)> InFunc) const;
+
+```
+
+### `INVALID METHOD NAME`
+```cpp
+protected:
+
+```
+
+### `GetFlowPilotComponent`
+> Returns FlowPilotComponent 
+```cpp
+UFlowPilotComponent* GetFlowPilotComponent() const;
+
+```
+
+### `GetFlowPilotOwnerActor`
+> Returns FlowPilotComponent Owner Actor 
+```cpp
+AActor* GetFlowPilotOwnerActor() const;
+
+```
+
+### `GetWorldContext`
+> Returns FlowPilot Actor World 
+```cpp
+UWorld* GetWorldContext() const;
+
+```
+
+### `GetWorld`
+```cpp
+virtual UWorld* GetWorld() const override;
+
+```
+
+### `INVALID METHOD NAME`
+```cpp
+protected:
+
+```
+
+
+### `UFlowPilotTask2` 
+
+__Parent Classes:__
+[ `UObject,`, `USomeOtherClass,`, `Interface` ]
+## Properties
+
+No documented properties available
+
+## Functions
+
+### `Setup`
+> Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
+```cpp
+virtual void Setup(FFlowContext* InContext);
+
+```
+
+### `Enter`
+> Called when starting this Task. Returns true on success 
+```cpp
+virtual bool Enter();
+
+```
+
+
+### `UFlowPilotTask3` 
+
+__Parent Classes:__
+[ `UObject` ]
+## Properties
+
+No documented properties available
+
+## Functions
+
+### `Setup`
+> Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
+```cpp
+virtual void Setup(FFlowContext* InContext);
+
+```
+
+### `Enter`
+> Called when starting this Task. Returns true on success 
+```cpp
+virtual bool Enter();
+
+```
+
