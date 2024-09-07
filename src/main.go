@@ -144,7 +144,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 
 		switch id {
 		case Empty:
-			commentStack = []string{}
+			// commentStack = []string{}
 			continue
 		case Comment:
 			// stack comments
