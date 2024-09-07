@@ -191,3 +191,11 @@ class FLOWPILOT_API UFlowPilotTask3 : public UObject
 	// Called when starting this Task. Returns true on success
 	virtual bool Enter();
 };
+
+enum class EMyEnum
+{
+	// Described Enum Option
+	a,
+	b,
+	c
+};

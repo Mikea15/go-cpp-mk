@@ -25,50 +25,72 @@ const (
 	CloseBracket
 )
 
-type AccessType int
-
-const (
-	Public = iota
-	Protected
-	Private
-)
-
-// type DataType int
-// const (
-// 	Class = iota
-// 	Struct
-// 	Enum
-// )
-
-type DataInfo struct {
-	Name       string
-	Parents    []string
-	Comments   []string
-	Properties []PropertyInfo
-	Functions  []FunctionInfo
-	IsStruct   bool
-	IsEnum     bool
-}
-
-type PropertyInfo struct {
-	Macro       string
-	Declaration string
-	Comments    []string
-	Access      AccessType
-}
-
-type FunctionInfo struct {
-	Name        string
-	Macro       string
-	Declaration string
-	Comments    []string
-	Access      AccessType
-}
-
 type FileInfo struct {
 	Path string
 	Name string
 	Data []DataInfo
+}
+
+func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []DataInfo) {
+
+	writer.WriteString("\n __FileName:__ `" + f.Name + "`\n")
+
+	for _, data := range f.Data {
+		if data.IsEnum {
+			enums = append(enums, data)
+		} else if data.IsStruct {
+			structs = append(structs, data)
+		} else {
+			classes = append(classes, data)
+		}
+	}
+
+	if len(classes) > 0 {
+		writer.WriteString("\n __Class List:__ \n")
+
+		writer.WriteString("[ ")
+		for i, class := range classes {
+			isLast := i == len(classes)-1
+			if !isLast {
+				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
+			} else {
+				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
+			}
+		}
+		writer.WriteString(" ]")
+	}
+
+	if len(structs) > 0 {
+		writer.WriteString("\n __Struct List:__ \n")
+
+		writer.WriteString("[ ")
+		for i, class := range structs {
+			isLast := i == len(structs)-1
+			if !isLast {
+				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
+			} else {
+				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
+			}
+		}
+		writer.WriteString(" ]")
+	}
+
+	if len(enums) > 0 {
+		writer.WriteString("\n __Enum List:__ \n")
+
+		writer.WriteString("[ ")
+		for i, class := range enums {
+			isLast := i == len(enums)-1
+			if !isLast {
+				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
+			} else {
+				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
+			}
+		}
+		writer.WriteString(" ]")
+	}
+
+	return
 }
 
 func main() {
@@ -630,251 +652,30 @@ func outputMarkdown(fileInfo *FileInfo, destFolder string) {
 		writer.WriteString("\n## File Info\n\n")
 	}
 
-	writer.WriteString("\n __FileName:__ `" + fileName + "`\n")
+	enumInfo, structInfo, classInfo := fileInfo.OutputInfo(writer)
 
-	classInfo := []DataInfo{}
-	structInfo := []DataInfo{}
-	enumInfo := []DataInfo{}
-
-	for _, data := range fileInfo.Data {
-		if data.IsEnum {
-			enumInfo = append(enumInfo, data)
-		} else if data.IsStruct {
-			structInfo = append(structInfo, data)
-		} else {
-			classInfo = append(classInfo, data)
-		}
+	for _, e := range enumInfo {
+		e.OutputHeader(writer)
+		e.OutputParents(writer)
+		e.OutputDescription(writer)
+		e.OutputProperties(writer)
+		e.OutputFunctions(writer)
 	}
 
-	if len(classInfo) > 0 {
-		writer.WriteString("\n __Class List:__ \n")
-
-		writer.WriteString("[ ")
-		for i, class := range classInfo {
-			isLast := i == len(classInfo)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
-			}
-		}
-		writer.WriteString(" ]")
+	for _, s := range structInfo {
+		s.OutputHeader(writer)
+		s.OutputParents(writer)
+		s.OutputDescription(writer)
+		s.OutputProperties(writer)
+		s.OutputFunctions(writer)
 	}
 
-	if len(structInfo) > 0 {
-		writer.WriteString("\n __Struct List:__ \n")
-
-		writer.WriteString("[ ")
-		for i, class := range structInfo {
-			isLast := i == len(structInfo)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
-			}
-		}
-		writer.WriteString(" ]")
-	}
-
-	if len(enumInfo) > 0 {
-		writer.WriteString("\n __Enum List:__ \n")
-
-		writer.WriteString("[ ")
-		for i, class := range enumInfo {
-			isLast := i == len(enumInfo)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
-			}
-		}
-		writer.WriteString(" ]")
-	}
-
-	for _, class := range classInfo {
-		writer.WriteString(fmt.Sprintf("\n### `" + class.Name + "` \n\n"))
-
-		if len(class.Parents) > 0 {
-			writer.WriteString("__Parent Classes:__\n")
-			writer.WriteString("[ ")
-			for i, parent := range class.Parents {
-				isLast := i == len(class.Parents)-1
-				if !isLast {
-					writer.WriteString(fmt.Sprintf("`%s`, ", parent))
-				} else {
-					writer.WriteString(fmt.Sprintf("`%s`", parent))
-				}
-			}
-			writer.WriteString(" ]")
-		}
-
-		// for i, comm := range info.Comments {
-		// 	isLast := i == max(len(info.Comments)-1, 0)
-		// 	if isLast {
-		// 		writer.WriteString("> " + cleanComment(comm) + " \n")
-		// 	} else {
-		// 		writer.WriteString("> " + cleanComment(comm) + " \\\n")
-		// 	}
-		// }
-
-		writer.WriteString("\n## Properties\n\n")
-		if len(class.Properties) == 0 {
-			writer.WriteString("No documented properties available\n")
-		} else {
-			writer.WriteString("```cpp\n")
-			for _, prop := range class.Properties {
-				for _, comm := range prop.Comments {
-					writer.WriteString("// " + cleanComment(comm) + " \n")
-				}
-				writer.WriteString(prop.Macro + "\n")
-				writer.WriteString(prop.Declaration + "\n\n")
-			}
-			writer.WriteString("```\n")
-		}
-
-		writer.WriteString("\n## Functions\n\n")
-		if len(class.Functions) == 0 {
-			writer.WriteString("No documented functions available\n")
-		} else {
-			for _, function := range class.Functions {
-				writer.WriteString("### `" + function.Name + "`\n")
-				for i, comm := range function.Comments {
-					isLast := i == max(len(function.Comments)-1, 0)
-					if isLast {
-						writer.WriteString("> " + cleanComment(comm) + " \n")
-					} else {
-						writer.WriteString("> " + cleanComment(comm) + " \\\n")
-					}
-				}
-				writer.WriteString("```cpp\n")
-				writer.WriteString(function.Declaration + "\n\n")
-				writer.WriteString("```\n\n")
-			}
-		}
-	}
-
-	for _, class := range structInfo {
-		writer.WriteString(fmt.Sprintf("\n### `" + class.Name + "` \n\n"))
-
-		if len(class.Parents) > 0 {
-			writer.WriteString("__Parent Classes:__\n")
-			writer.WriteString("[ ")
-			for i, parent := range class.Parents {
-				isLast := i == len(class.Parents)-1
-				if !isLast {
-					writer.WriteString(fmt.Sprintf("`%s`, ", parent))
-				} else {
-					writer.WriteString(fmt.Sprintf("`%s`", parent))
-				}
-			}
-			writer.WriteString(" ]")
-		}
-
-		// for i, comm := range info.Comments {
-		// 	isLast := i == max(len(info.Comments)-1, 0)
-		// 	if isLast {
-		// 		writer.WriteString("> " + cleanComment(comm) + " \n")
-		// 	} else {
-		// 		writer.WriteString("> " + cleanComment(comm) + " \\\n")
-		// 	}
-		// }
-
-		writer.WriteString("\n## Properties\n\n")
-		if len(class.Properties) == 0 {
-			writer.WriteString("No documented properties available\n")
-		} else {
-			writer.WriteString("```cpp\n")
-			for _, prop := range class.Properties {
-				for _, comm := range prop.Comments {
-					writer.WriteString("// " + cleanComment(comm) + " \n")
-				}
-				writer.WriteString(prop.Macro + "\n")
-				writer.WriteString(prop.Declaration + "\n\n")
-			}
-			writer.WriteString("```\n")
-		}
-
-		writer.WriteString("\n## Functions\n\n")
-		if len(class.Functions) == 0 {
-			writer.WriteString("No documented functions available\n")
-		} else {
-			for _, function := range class.Functions {
-				writer.WriteString("### `" + function.Name + "`\n")
-				for i, comm := range function.Comments {
-					isLast := i == max(len(function.Comments)-1, 0)
-					if isLast {
-						writer.WriteString("> " + cleanComment(comm) + " \n")
-					} else {
-						writer.WriteString("> " + cleanComment(comm) + " \\\n")
-					}
-				}
-				writer.WriteString("```cpp\n")
-				writer.WriteString(function.Declaration + "\n\n")
-				writer.WriteString("```\n\n")
-			}
-		}
-	}
-
-	for _, class := range enumInfo {
-		writer.WriteString(fmt.Sprintf("\n### `" + class.Name + "` \n\n"))
-
-		if len(class.Parents) > 0 {
-			writer.WriteString("__Parent Classes:__\n")
-			writer.WriteString("[ ")
-			for i, parent := range class.Parents {
-				isLast := i == len(class.Parents)-1
-				if !isLast {
-					writer.WriteString(fmt.Sprintf("`%s`, ", parent))
-				} else {
-					writer.WriteString(fmt.Sprintf("`%s`", parent))
-				}
-			}
-			writer.WriteString(" ]")
-		}
-
-		// for i, comm := range info.Comments {
-		// 	isLast := i == max(len(info.Comments)-1, 0)
-		// 	if isLast {
-		// 		writer.WriteString("> " + cleanComment(comm) + " \n")
-		// 	} else {
-		// 		writer.WriteString("> " + cleanComment(comm) + " \\\n")
-		// 	}
-		// }
-
-		writer.WriteString("\n## Properties\n\n")
-		if len(class.Properties) == 0 {
-			writer.WriteString("No documented properties available\n")
-		} else {
-			writer.WriteString("```cpp\n")
-			for _, prop := range class.Properties {
-				for _, comm := range prop.Comments {
-					writer.WriteString("// " + cleanComment(comm) + " \n")
-				}
-				writer.WriteString(prop.Macro + "\n")
-				writer.WriteString(prop.Declaration + "\n\n")
-			}
-			writer.WriteString("```\n")
-		}
-
-		writer.WriteString("\n## Functions\n\n")
-		if len(class.Functions) == 0 {
-			writer.WriteString("No documented functions available\n")
-		} else {
-			for _, function := range class.Functions {
-				writer.WriteString("### `" + function.Name + "`\n")
-				for i, comm := range function.Comments {
-					isLast := i == max(len(function.Comments)-1, 0)
-					if isLast {
-						writer.WriteString("> " + cleanComment(comm) + " \n")
-					} else {
-						writer.WriteString("> " + cleanComment(comm) + " \\\n")
-					}
-				}
-				writer.WriteString("```cpp\n")
-				writer.WriteString(function.Declaration + "\n\n")
-				writer.WriteString("```\n\n")
-			}
-		}
+	for _, c := range classInfo {
+		c.OutputHeader(writer)
+		c.OutputParents(writer)
+		c.OutputDescription(writer)
+		c.OutputProperties(writer)
+		c.OutputFunctions(writer)
 	}
 
 	writer.Flush()

@@ -32,11 +32,30 @@ Each class that can be implemented need to override a couple of virtual methods 
 
  __Class List:__ 
 [ [`UFlowPilotTask`](#UFlowPilotTask) | [`UFlowPilotTask2`](#UFlowPilotTask2) | [`UFlowPilotTask3`](#UFlowPilotTask3) ]
-### `UFlowPilotTask` 
+ __Enum List:__ 
+[ [`EMyEnum`](#EMyEnum) ]
+
+## `EMyEnum` 
+
+
+
+
+
+
+
+## `UFlowPilotTask` 
+
 
 __Parent Classes:__
 [ `UObject` ]
-## Properties
+ \
+FlowPilotTask \
+Base class for any task that can be run by FlowPilotComponent \
+Class is tickable. \
+If Tick not implemented, will automatically succeed on first tick 
+
+
+### Properties
 
 ```cpp
 // Task name 
@@ -55,58 +74,37 @@ uint8 bEnabled: 1;
 UPROPERTY()
 UFlowPilotTask* Parent = nullptr;
 
-
-const FFlowContext* Context = nullptr;
-
-
-EFPInternalTaskState InternalState;
-
 ```
 
-## Functions
 
-### `UFlowPilotTask`
-```cpp
-UFlowPilotTask();
+### Functions
 
-```
-
-### `Setup`
+#### `Setup`
 > Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
 ```cpp
 virtual void Setup(FFlowContext* InContext);
-
 ```
-
-### `Enter`
+#### `Enter`
 > Called when starting this Task. Returns true on success 
 ```cpp
 virtual bool Enter();
-
 ```
-
-### `Tick`
+#### `Tick`
 > Called on Tick. Will success automatically if not implemented by Child classes 
 ```cpp
 virtual EFPTaskResult Tick(float DeltaTime);
-
 ```
-
-### `Exit`
+#### `Exit`
 > Called when Task Finished 
 ```cpp
 virtual void Exit(EFPTaskResult TaskResult);
-
 ```
-
-### `Reset`
+#### `Reset`
 > Resets all Tasks into their Setup States 
 ```cpp
 virtual void Reset();
-
 ```
-
-### `HasParent`
+#### `HasParent`
 > Disabled Tasks are skipped during execution \
 > Enables or Disables Task. Disabled Tasks will be skipped. \
 > Returns Task Name \
@@ -116,153 +114,107 @@ virtual void Reset();
 > Returns False if Task is Root Sequence Task 
 ```cpp
 bool HasParent() const;
-
 ```
-
-### `GetParent`
+#### `GetParent`
 > Returns Parent Task or nullptr 
 ```cpp
 UFlowPilotTask* GetParent() const;
-
 ```
-
-### `IsParent`
+#### `IsParent`
 > Sets Parent Task \
 > Returns True if This task is a FlowPilotParent Task containing children Tasks. 
 ```cpp
 bool IsParent() const;
-
 ```
-
-### `GetAsParent`
+#### `GetAsParent`
 > Returns this Cast to FlowPilotParent task. 
 ```cpp
 UFlowPilotParent* GetAsParent();
-
 ```
-
-### `HasStarted`
+#### `HasStarted`
 > Returns true when Task Started 
 ```cpp
 bool HasStarted() const;
-
 ```
-
-### `IsActive`
+#### `IsActive`
 > Returns true when Task in Progress and Not Complete 
 ```cpp
 bool IsActive() const;
-
 ```
-
-### `IsComplete`
+#### `IsComplete`
 > Returns true when Task is Complete 
 ```cpp
 bool IsComplete() const;
-
 ```
-
-### `ForEachActor`
+#### `ForEachActor`
 > Executes 'InFunc' to all Actors found from 'ActorReference' 
 ```cpp
 bool ForEachActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(AActor* const /*Actor*/)> InFunc) const;
-
 ```
-
-### `ForEachConstActor`
+#### `ForEachConstActor`
 > Executes 'InFunc' to all const Actors found from 'ActorReference' \
 > Const means the function should not modify 'Actors' 
 ```cpp
 bool ForEachConstActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(const AActor* const /*Actor*/)> InFunc) const;
-
 ```
-
-### `INVALID METHOD NAME`
-```cpp
-protected:
-
-```
-
-### `GetFlowPilotComponent`
+#### `GetFlowPilotComponent`
 > Returns FlowPilotComponent 
 ```cpp
 UFlowPilotComponent* GetFlowPilotComponent() const;
-
 ```
-
-### `GetFlowPilotOwnerActor`
+#### `GetFlowPilotOwnerActor`
 > Returns FlowPilotComponent Owner Actor 
 ```cpp
 AActor* GetFlowPilotOwnerActor() const;
-
 ```
-
-### `GetWorldContext`
+#### `GetWorldContext`
 > Returns FlowPilot Actor World 
 ```cpp
 UWorld* GetWorldContext() const;
-
-```
-
-### `GetWorld`
-```cpp
-virtual UWorld* GetWorld() const override;
-
-```
-
-### `INVALID METHOD NAME`
-```cpp
-protected:
-
 ```
 
 
-### `UFlowPilotTask2` 
+## `UFlowPilotTask2` 
+
 
 __Parent Classes:__
 [ `UObject,`, `USomeOtherClass,`, `Interface` ]
-## Properties
+Class 2 
 
-No documented properties available
 
-## Functions
 
-### `Setup`
+### Functions
+
+#### `Setup`
 > Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
 ```cpp
 virtual void Setup(FFlowContext* InContext);
-
 ```
-
-### `Enter`
+#### `Enter`
 > Called when starting this Task. Returns true on success 
 ```cpp
 virtual bool Enter();
-
 ```
 
 
-### `UFlowPilotTask3` 
+## `UFlowPilotTask3` 
+
 
 __Parent Classes:__
 [ `UObject` ]
-## Properties
+Class 3 
 
-No documented properties available
 
-## Functions
 
-### `Setup`
+### Functions
+
+#### `Setup`
 > Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
 ```cpp
 virtual void Setup(FFlowContext* InContext);
-
 ```
-
-### `Enter`
+#### `Enter`
 > Called when starting this Task. Returns true on success 
 ```cpp
 virtual bool Enter();
-
 ```
-
