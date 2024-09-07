@@ -8,91 +8,6 @@ import (
 	"strings"
 )
 
-type LineId int
-
-const (
-	Empty = iota
-	Comment
-	Class
-	Struct
-	Enum
-	Function
-	Property
-	AccessModifier
-	OpenIgnore
-	CloseIgnore
-	OpenBracket
-	CloseBracket
-)
-
-type FileInfo struct {
-	Path string
-	Name string
-	Data []DataInfo
-}
-
-func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []DataInfo) {
-
-	writer.WriteString("\n __FileName:__ `" + f.Name + "`\n")
-
-	for _, data := range f.Data {
-		if data.IsEnum {
-			enums = append(enums, data)
-		} else if data.IsStruct {
-			structs = append(structs, data)
-		} else {
-			classes = append(classes, data)
-		}
-	}
-
-	if len(classes) > 0 {
-		writer.WriteString("\n __Class List:__ \n")
-
-		writer.WriteString("[ ")
-		for i, class := range classes {
-			isLast := i == len(classes)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
-			}
-		}
-		writer.WriteString(" ]")
-	}
-
-	if len(structs) > 0 {
-		writer.WriteString("\n __Struct List:__ \n")
-
-		writer.WriteString("[ ")
-		for i, class := range structs {
-			isLast := i == len(structs)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
-			}
-		}
-		writer.WriteString(" ]")
-	}
-
-	if len(enums) > 0 {
-		writer.WriteString("\n __Enum List:__ \n")
-
-		writer.WriteString("[ ")
-		for i, class := range enums {
-			isLast := i == len(enums)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + class.Name + "`](#" + class.Name + ")"))
-			}
-		}
-		writer.WriteString(" ]")
-	}
-
-	return
-}
-
 func main() {
 	if len(os.Args) != 3 {
 		fmt.Println("Usage: program <source_folder> <destination_folder>")
@@ -183,6 +98,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 		"//~UFlowPilotTask",
 	}
 
+	var isInsideEnum = false
 	var ignoreBlock = false
 	var currentAccessType AccessType = Private
 	var prevId LineId = Empty
@@ -201,11 +117,11 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 			continue
 		}
 
-		id := idLine(line, prevId)
+		id := idLine(line, prevId, isInsideEnum)
 
-		if id != Empty {
-			fmt.Printf("[%d][%d][%d] %s\n", id, currentAccessType, ignoreBlock, line)
-		}
+		// if id != Empty {
+		// fmt.Printf("[%d][%d][%d] %s\n", id, currentAccessType, ignoreBlock, line)
+		// }
 
 		if ignoreBlock && id == CloseIgnore {
 			ignoreBlock = false
@@ -228,10 +144,14 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 			// stack comments
 			commentStack = append(commentStack, line)
 		case CloseBracket:
+			if isInsideEnum {
+				isInsideEnum = false
+			}
 			currentClassIndex.Pop()
 		case OpenBracket:
 
 		case Enum:
+			isInsideEnum = true
 			if !isEnumMacro(line) {
 				var name = extractEnumInfo(line)
 				var info = DataInfo{
@@ -244,6 +164,18 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 
 				commentStack = []string{}
 			}
+		case EnumProp:
+			var data = PropertyInfo{
+				Macro:       "",
+				Declaration: line,
+				Comments:    commentStack,
+				Access:      Public,
+			}
+
+			propMacro = ""
+			commentStack = []string{}
+
+			fileInfo.Data[currentClassIndex.Top()].Properties = append(fileInfo.Data[currentClassIndex.Top()].Properties, data)
 		case Class:
 			if !isClassMacro(line) {
 				var name, parents, _ = extractClassInfo(line)
@@ -330,7 +262,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 	}
 }
 
-func idLine(line string, prevId LineId) LineId {
+func idLine(line string, prevId LineId, isInsideEnum bool) LineId {
 
 	if len(line) == 0 || isCopy(line) {
 		return Empty
@@ -370,6 +302,10 @@ func idLine(line string, prevId LineId) LineId {
 
 	if isEnumMacro(line) || isEnum(line) {
 		return Enum
+	}
+
+	if isInsideEnum {
+		return EnumProp
 	}
 
 	if isPropertyMacro(line) || isProperty(line, prevId == Property) {
@@ -540,6 +476,10 @@ func isPropertyMacro(line string) bool {
 	return strings.HasPrefix(line, "UPROPERTY")
 }
 
+func isEnumProperty(line string) bool {
+	return strings.HasSuffix(line, ",")
+}
+
 func isProperty(line string, prevIsProp bool) bool {
 	if prevIsProp {
 		return true
@@ -571,6 +511,12 @@ func isFunction(line string, prevIsFn bool) bool {
 	if prevIsFn {
 		return true
 	}
+
+	parts := strings.Fields(line)
+	if len(parts) >= 2 && strings.Contains(line, "(") && strings.Contains(line, ")") {
+		return true
+	}
+
 	return strings.Contains(line, "(") && strings.Contains(line, ")") && strings.HasSuffix(line, ";")
 }
 

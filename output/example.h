@@ -192,10 +192,83 @@ class FLOWPILOT_API UFlowPilotTask3 : public UObject
 	virtual bool Enter();
 };
 
-enum class EMyEnum
+/*
+ * Internal Task state
+ * - !! Order Important !!
+ */
+enum class EFPInternalTaskState : uint8
 {
-	// Described Enum Option
-	a,
-	b,
-	c
+	// Not started yet
+	Invalid = 0,
+	// Setup done
+	Setup,
+	// Started Execution
+	Started,
+	// Is in Progress
+	Ticking,
+	// Completed
+	Completed
+};
+
+namespace EAnimationMode
+{
+	enum Type : int;
+}
+
+/*
+ * FlowPilot Stop Type
+ */
+UENUM()
+enum class EFPStopType : uint8
+{
+	// Cancel Execution will call Exit with Failure state on Running Tasks
+	CancelExecution,
+	// Stop Now will just stop execution. Exit won't be called.
+	StopNow
+};
+
+/*
+ * Task Execution Result
+ */
+UENUM(BlueprintType)
+enum class EFPTaskResult : uint8
+{
+	// Not started yet
+	None,
+	// In progress and Ticking
+	InProgress,
+	// Complete with Success Result
+	Succeeded,
+	// Complete with Fail Result
+	Failed,
+	// Not Complete. Return Error
+	Error
+};
+
+/*
+ * FFlowActorReference
+ */
+USTRUCT(BlueprintType, Blueprintable)
+struct FLOWPILOT_API FFlowActorReference
+{
+	GENERATED_BODY();
+
+	FString ToString() const;
+
+	bool operator==(const FFlowActorReference& Other) const;
+	bool operator!=(const FFlowActorReference& Other) const { return !(*this==Other); }
+	bool IsValid() const;
+
+	// What's the scope of the Subject Actor
+	// (Self, In Level or Runtime)
+	UPROPERTY(EditAnywhere, Category = "Actor Reference")
+	EFlowActorScope Scope = EFlowActorScope::Self;
+	
+	// Level Actor Reference
+	UPROPERTY(EditAnywhere, Category = "Actor Reference", meta=(EditCondition="Scope==EFlowActorScope::InLevel", EditConditionHides))
+	TSoftObjectPtr<AActor> LevelActor; 
+
+	// Runtime Actor, found via Gameplay Tag.
+	UPROPERTY(EditAnywhere, Category = "Actor Reference", meta=(EditCondition="Scope==EFlowActorScope::Runtime", EditConditionHides))
+	FGameplayTag ExternalActorTag;
 };

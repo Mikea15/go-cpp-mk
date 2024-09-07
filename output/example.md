@@ -28,19 +28,101 @@ Each class that can be implemented need to override a couple of virtual methods 
 
 ## File Info
 
- __FileName:__ `example.h`
-
- __Class List:__ 
+__FileName:__ `example.h`
+- __Class List:__ 
 [ [`UFlowPilotTask`](#UFlowPilotTask) | [`UFlowPilotTask2`](#UFlowPilotTask2) | [`UFlowPilotTask3`](#UFlowPilotTask3) ]
- __Enum List:__ 
-[ [`EMyEnum`](#EMyEnum) ]
-
-## `EMyEnum` 
-
-
+- __Struct List:__ 
+[ [`FFlowActorReference`](#FFlowActorReference) ]
+- __Enum List:__ 
+[ [`EFPInternalTaskState`](#EFPInternalTaskState) | [`EFPStopType`](#EFPStopType) | [`EFPTaskResult`](#EFPTaskResult) ]
 
 
+## `EFPInternalTaskState` 
 
+
+### Properties
+
+```cpp
+// Not started yet 
+Invalid = 0,
+
+// Setup done 
+Setup,
+
+// Started Execution 
+Started,
+
+// Is in Progress 
+Ticking,
+
+// Completed 
+Completed
+
+```
+
+
+## `EFPStopType` 
+
+
+### Properties
+
+```cpp
+// Cancel Execution will call Exit with Failure state on Running Tasks 
+CancelExecution,
+
+// Stop Now will just stop execution. Exit won't be called. 
+StopNow
+
+```
+
+
+## `EFPTaskResult` 
+
+
+### Properties
+
+```cpp
+// Not started yet 
+None,
+
+// In progress and Ticking 
+InProgress,
+
+// Complete with Success Result 
+Succeeded,
+
+// Complete with Fail Result 
+Failed,
+
+// Not Complete. Return Error 
+Error
+
+```
+
+
+## `FFlowActorReference` 
+
+
+ \
+FFlowActorReference 
+
+### Properties
+
+```cpp
+// What's the scope of the Subject Actor 
+// (Self, In Level or Runtime) 
+UPROPERTY(EditAnywhere, Category = "Actor Reference")
+EFlowActorScope Scope = EFlowActorScope::Self;
+
+// Level Actor Reference 
+UPROPERTY(EditAnywhere, Category = "Actor Reference", meta=(EditCondition="Scope==EFlowActorScope::InLevel", EditConditionHides))
+TSoftObjectPtr<AActor> LevelActor;
+
+// Runtime Actor, found via Gameplay Tag. 
+UPROPERTY(EditAnywhere, Category = "Actor Reference", meta=(EditCondition="Scope==EFlowActorScope::Runtime", EditConditionHides))
+FGameplayTag ExternalActorTag;
+
+```
 
 
 ## `UFlowPilotTask` 
@@ -48,12 +130,12 @@ Each class that can be implemented need to override a couple of virtual methods 
 
 __Parent Classes:__
 [ `UObject` ]
+
  \
 FlowPilotTask \
 Base class for any task that can be run by FlowPilotComponent \
 Class is tickable. \
 If Tick not implemented, will automatically succeed on first tick 
-
 
 ### Properties
 
@@ -75,7 +157,6 @@ UPROPERTY()
 UFlowPilotTask* Parent = nullptr;
 
 ```
-
 
 ### Functions
 
@@ -104,12 +185,32 @@ virtual void Exit(EFPTaskResult TaskResult);
 ```cpp
 virtual void Reset();
 ```
+#### `IsEnabled`
+> Disabled Tasks are skipped during execution 
+```cpp
+bool IsEnabled() const { return bEnabled; }
+```
+#### `SetIsEnabled`
+> Enables or Disables Task. Disabled Tasks will be skipped. 
+```cpp
+void SetIsEnabled(bool bInEnabled) { bEnabled = bInEnabled; }
+```
+#### `GetTaskName`
+> Returns Task Name 
+```cpp
+FName GetTaskName() const { return TaskName; }
+```
+#### `SetTaskName`
+> Sets Task Name 
+```cpp
+void SetTaskName(FName NewTaskName) { TaskName = NewTaskName; }
+```
+#### `GetTaskDescription`
+> Get Task Description 
+```cpp
+FName GetTaskDescription() const { return Description; }
+```
 #### `HasParent`
-> Disabled Tasks are skipped during execution \
-> Enables or Disables Task. Disabled Tasks will be skipped. \
-> Returns Task Name \
-> Sets Task Name \
-> Get Task Description \
 > Returns True if Task has Parent Task. \
 > Returns False if Task is Root Sequence Task 
 ```cpp
@@ -120,8 +221,12 @@ bool HasParent() const;
 ```cpp
 UFlowPilotTask* GetParent() const;
 ```
+#### `SetParent`
+> Sets Parent Task 
+```cpp
+void SetParent(UFlowPilotTask* InParent) { Parent = InParent; }
+```
 #### `IsParent`
-> Sets Parent Task \
 > Returns True if This task is a FlowPilotParent Task containing children Tasks. 
 ```cpp
 bool IsParent() const;
@@ -179,9 +284,8 @@ UWorld* GetWorldContext() const;
 
 __Parent Classes:__
 [ `UObject,`, `USomeOtherClass,`, `Interface` ]
+
 Class 2 
-
-
 
 ### Functions
 
@@ -202,9 +306,8 @@ virtual bool Enter();
 
 __Parent Classes:__
 [ `UObject` ]
+
 Class 3 
-
-
 
 ### Functions
 

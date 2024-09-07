@@ -44,8 +44,8 @@ func (d *DataInfo) OutputHeader(writer *bufio.Writer) {
 }
 
 func (d *DataInfo) OutputParents(writer *bufio.Writer) {
-	writer.WriteString("\n")
 	if len(d.Parents) > 0 {
+		writer.WriteString("\n")
 		writer.WriteString("__Parent Classes:__\n")
 		writer.WriteString("[ ")
 		for i, parent := range d.Parents {
@@ -56,26 +56,28 @@ func (d *DataInfo) OutputParents(writer *bufio.Writer) {
 				writer.WriteString(fmt.Sprintf("`%s`", parent))
 			}
 		}
-		writer.WriteString(" ]")
+		writer.WriteString(" ]\n")
 	}
 }
 
 func (d *DataInfo) OutputDescription(writer *bufio.Writer) {
-	writer.WriteString("\n")
-	for i, com := range d.Comments {
-		isLast := i == max(len(d.Comments)-1, 0)
-		if isLast {
-			writer.WriteString("" + cleanComment(com) + " \n")
-		} else {
-			writer.WriteString("" + cleanComment(com) + " \\\n")
+	if len(d.Comments) > 0 {
+		writer.WriteString("\n")
+		for i, com := range d.Comments {
+			isLast := i == max(len(d.Comments)-1, 0)
+			if isLast {
+				writer.WriteString("" + cleanComment(com) + " \n")
+			} else {
+				writer.WriteString("" + cleanComment(com) + " \\\n")
+			}
 		}
 	}
 }
 
 func (d *DataInfo) OutputProperties(writer *bufio.Writer) {
-	writer.WriteString("\n")
-	if len(d.Properties) > 0 {
-		writer.WriteString("\n### Properties\n\n")
+	if d.HasDocumentedProperties() {
+		writer.WriteString("\n")
+		writer.WriteString("### Properties\n\n")
 
 		writer.WriteString("```cpp\n")
 		for _, prop := range d.Properties {
@@ -85,7 +87,9 @@ func (d *DataInfo) OutputProperties(writer *bufio.Writer) {
 			for _, comm := range prop.Comments {
 				writer.WriteString("// " + cleanComment(comm) + " \n")
 			}
-			writer.WriteString(prop.Macro + "\n")
+			if prop.Macro != "" {
+				writer.WriteString(prop.Macro + "\n")
+			}
 			writer.WriteString(prop.Declaration + "\n\n")
 		}
 		writer.WriteString("```\n")
@@ -93,9 +97,9 @@ func (d *DataInfo) OutputProperties(writer *bufio.Writer) {
 }
 
 func (d *DataInfo) OutputFunctions(writer *bufio.Writer) {
-	writer.WriteString("\n")
-	if len(d.Functions) > 0 {
-		writer.WriteString("\n### Functions\n\n")
+	if d.HasDocumentedFunctions() {
+		writer.WriteString("\n")
+		writer.WriteString("### Functions\n\n")
 
 		for _, function := range d.Functions {
 			if len(function.Comments) == 0 {
@@ -115,4 +119,22 @@ func (d *DataInfo) OutputFunctions(writer *bufio.Writer) {
 			writer.WriteString("```\n")
 		}
 	}
+}
+
+func (d *DataInfo) HasDocumentedProperties() bool {
+	for _, prop := range d.Properties {
+		if len(prop.Comments) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DataInfo) HasDocumentedFunctions() bool {
+	for _, function := range d.Functions {
+		if len(function.Comments) > 0 {
+			return true
+		}
+	}
+	return false
 }
