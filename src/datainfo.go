@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"strings"
 )
 
 type AccessType int
@@ -43,6 +44,11 @@ func (d *DataInfo) OutputHeader(writer *bufio.Writer) {
 	writer.WriteString(fmt.Sprintf("\n## `" + d.Name + "` \n\n"))
 }
 
+func (d *DataInfo) OutputEnumHeader(writer *bufio.Writer) {
+	writer.WriteString("\n")
+	writer.WriteString(fmt.Sprintf("\n### `" + d.Name + "` \n\n"))
+}
+
 func (d *DataInfo) OutputParents(writer *bufio.Writer) {
 	if len(d.Parents) > 0 {
 		writer.WriteString("\n")
@@ -63,13 +69,8 @@ func (d *DataInfo) OutputParents(writer *bufio.Writer) {
 func (d *DataInfo) OutputDescription(writer *bufio.Writer) {
 	if len(d.Comments) > 0 {
 		writer.WriteString("\n")
-		for i, com := range d.Comments {
-			isLast := i == max(len(d.Comments)-1, 0)
-			if isLast {
-				writer.WriteString("" + cleanComment(com) + " \n")
-			} else {
-				writer.WriteString("" + cleanComment(com) + " \\\n")
-			}
+		for _, com := range d.Comments {
+			writer.WriteString("" + cleanComment(com) + " \n")
 		}
 	}
 }
@@ -107,7 +108,7 @@ func (d *DataInfo) OutputFunctions(writer *bufio.Writer) {
 			}
 			writer.WriteString("#### `" + function.Name + "`\n")
 			for i, comm := range function.Comments {
-				isLast := i == max(len(function.Comments)-1, 0)
+				isLast := i == len(function.Comments)-1
 				if isLast {
 					writer.WriteString("> " + cleanComment(comm) + " \n")
 				} else {
@@ -141,4 +142,24 @@ func (d *DataInfo) HasDocumentedFunctions() bool {
 		}
 	}
 	return false
+}
+
+func (d *DataInfo) OutputEnumInfo(writer *bufio.Writer) {
+	writer.WriteString("\n")
+	writer.WriteString("| Value | Description | \n")
+	writer.WriteString("| :-- | :-- | \n")
+
+	for _, prop := range d.Properties {
+		mergedComment := strings.Join(prop.Comments, "\n")
+		if len(mergedComment) == 0 {
+			writer.WriteString("| `" + strings.TrimRight(prop.Declaration, ",") + "` | " + strings.TrimRight(prop.Declaration, ",") + " | \n")
+		} else {
+			comment := []string{}
+			for _, comm := range prop.Comments {
+				comment = append(comment, cleanComment(comm))
+			}
+			writer.WriteString("| `" + strings.TrimRight(prop.Declaration, ",") + "` | " + strings.Join(comment, ", ") + " | \n")
+		}
+	}
+	writer.WriteString("\n")
 }

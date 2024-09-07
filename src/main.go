@@ -100,6 +100,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 		"// UFlowPilotTask",
 		"//~UFlowPilotTask",
 		"DECLARE_MULTICAST_DELEGATE",
+		"// TODO (MA):",
 	}
 
 	var isInsideEnum = false
@@ -143,6 +144,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 
 		switch id {
 		case Empty:
+			commentStack = []string{}
 			continue
 		case Comment:
 			// stack comments
@@ -614,13 +616,9 @@ func outputMarkdown(fileInfo *FileInfo, destFolder string) {
 	enumInfo, structInfo, classInfo := fileInfo.OutputInfo(writer)
 
 	for _, e := range enumInfo {
-		if e.HasDocumentation() {
-			e.OutputHeader(writer)
-			e.OutputParents(writer)
-			e.OutputDescription(writer)
-			e.OutputProperties(writer)
-			e.OutputFunctions(writer)
-		}
+		e.OutputEnumHeader(writer)
+		e.OutputDescription(writer)
+		e.OutputEnumInfo(writer)
 	}
 
 	for _, s := range structInfo {

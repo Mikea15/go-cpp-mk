@@ -44,18 +44,16 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 		}
 	}
 
-	if len(classes) > 0 {
-		writer.WriteString("- __Class List:__ \n")
+	if len(enums) > 0 {
+		writer.WriteString("- __Enum List:__ \n")
 
 		writer.WriteString("[ ")
-		for i, c := range classes {
-			if c.HasDocumentation() {
-				isLast := i == len(classes)-1
-				if !isLast {
-					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + strings.ToLower(c.Name) + ") | "))
-				} else {
-					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + strings.ToLower(c.Name) + ")"))
-				}
+		for i, e := range enums {
+			isLast := i == len(enums)-1
+			if !isLast {
+				writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + strings.ToLower(e.Name) + ") | "))
+			} else {
+				writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + strings.ToLower(e.Name) + ")"))
 			}
 		}
 		writer.WriteString(" ]\n")
@@ -78,17 +76,17 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 		writer.WriteString(" ]\n")
 	}
 
-	if len(enums) > 0 {
-		writer.WriteString("- __Enum List:__ \n")
+	if len(classes) > 0 {
+		writer.WriteString("- __Class List:__ \n")
 
 		writer.WriteString("[ ")
-		for i, e := range enums {
-			if e.HasDocumentation() {
-				isLast := i == len(enums)-1
+		for i, c := range classes {
+			if c.HasDocumentation() {
+				isLast := i == len(classes)-1
 				if !isLast {
-					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + strings.ToLower(e.Name) + ") | "))
+					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + strings.ToLower(c.Name) + ") | "))
 				} else {
-					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + strings.ToLower(e.Name) + ")"))
+					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + strings.ToLower(c.Name) + ")"))
 				}
 			}
 		}
