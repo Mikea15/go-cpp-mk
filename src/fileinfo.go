@@ -48,11 +48,13 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 
 		writer.WriteString("[ ")
 		for i, c := range classes {
-			isLast := i == len(classes)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + c.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + c.Name + ")"))
+			if c.HasDocumentation() {
+				isLast := i == len(classes)-1
+				if !isLast {
+					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + c.Name + ") | "))
+				} else {
+					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + c.Name + ")"))
+				}
 			}
 		}
 		writer.WriteString(" ]\n")
@@ -63,11 +65,13 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 
 		writer.WriteString("[ ")
 		for i, s := range structs {
-			isLast := i == len(structs)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + s.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + s.Name + ")"))
+			if s.HasDocumentation() {
+				isLast := i == len(structs)-1
+				if !isLast {
+					writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + s.Name + ") | "))
+				} else {
+					writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + s.Name + ")"))
+				}
 			}
 		}
 		writer.WriteString(" ]\n")
@@ -78,11 +82,13 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 
 		writer.WriteString("[ ")
 		for i, e := range enums {
-			isLast := i == len(enums)-1
-			if !isLast {
-				writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + e.Name + ") | "))
-			} else {
-				writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + e.Name + ")"))
+			if e.HasDocumentation() {
+				isLast := i == len(enums)-1
+				if !isLast {
+					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + e.Name + ") | "))
+				} else {
+					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + e.Name + ")"))
+				}
 			}
 		}
 		writer.WriteString(" ]\n")

@@ -20,6 +20,8 @@ func main() {
 	ignoreFiles := []string{
 		"FlowPilotModule.h",
 		"FlowPilotCustomVersion.h",
+		"FlowPilotDebugUtils.h",
+		"FlowPilotGlobals.h",
 	}
 
 	var fileInfoList []FileInfo
@@ -59,6 +61,7 @@ func main() {
 	})
 
 	for i := 0; i < len(fileInfoList); i++ {
+		fmt.Printf("Processing file: %s\n", fileInfoList[i].Name)
 		processFile(&fileInfoList[i], destFolder, i)
 	}
 
@@ -96,6 +99,7 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 	ignorePrefixList := []string{
 		"// UFlowPilotTask",
 		"//~UFlowPilotTask",
+		"DECLARE_MULTICAST_DELEGATE",
 	}
 
 	var isInsideEnum = false
@@ -119,9 +123,9 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 
 		id := idLine(line, prevId, isInsideEnum)
 
-		// if id != Empty {
+		//if id != Empty {
 		// fmt.Printf("[%d][%d][%d] %s\n", id, currentAccessType, ignoreBlock, line)
-		// }
+		//}
 
 		if ignoreBlock && id == CloseIgnore {
 			ignoreBlock = false
@@ -165,6 +169,9 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 				commentStack = []string{}
 			}
 		case EnumProp:
+			if currentClassIndex.IsEmpty() {
+				continue
+			}
 			var data = PropertyInfo{
 				Macro:       "",
 				Declaration: line,
@@ -209,6 +216,9 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 				commentStack = []string{}
 			}
 		case Function:
+			if currentClassIndex.IsEmpty() {
+				continue
+			}
 			if isFunctionMacro(line) {
 				fnMacro = line
 			} else {
@@ -226,6 +236,9 @@ func extractInfo(file *os.File, fileInfo *FileInfo) {
 				fileInfo.Data[currentClassIndex.Top()].Functions = append(fileInfo.Data[currentClassIndex.Top()].Functions, data)
 			}
 		case Property:
+			if currentClassIndex.IsEmpty() {
+				continue
+			}
 			if isPropertyMacro(line) {
 				propMacro = line
 			} else {
@@ -445,7 +458,7 @@ func cleanComment(line string) (comment string) {
 }
 
 func isCopy(line string) bool {
-	return strings.HasPrefix(line, "// Copy")
+	return strings.Contains(line, "Copyright")
 }
 
 func isClassMacro(line string) bool {
@@ -571,7 +584,7 @@ func accessModifierString(accessType AccessType) string {
 
 func outputMarkdown(fileInfo *FileInfo, destFolder string) {
 	fileName := filepath.Base(fileInfo.Path)
-	outputPath := filepath.Join(destFolder, strings.TrimSuffix(fileName, filepath.Ext(fileName))+".md")
+	outputPath := filepath.Join(destFolder, strings.TrimSuffix(fileName, filepath.Ext(fileName))+".mdx")
 
 	var keepContent, hasDefinitionHeader = keepExistingMarkdown(fileInfo.Path, destFolder)
 
@@ -601,27 +614,33 @@ func outputMarkdown(fileInfo *FileInfo, destFolder string) {
 	enumInfo, structInfo, classInfo := fileInfo.OutputInfo(writer)
 
 	for _, e := range enumInfo {
-		e.OutputHeader(writer)
-		e.OutputParents(writer)
-		e.OutputDescription(writer)
-		e.OutputProperties(writer)
-		e.OutputFunctions(writer)
+		if e.HasDocumentation() {
+			e.OutputHeader(writer)
+			e.OutputParents(writer)
+			e.OutputDescription(writer)
+			e.OutputProperties(writer)
+			e.OutputFunctions(writer)
+		}
 	}
 
 	for _, s := range structInfo {
-		s.OutputHeader(writer)
-		s.OutputParents(writer)
-		s.OutputDescription(writer)
-		s.OutputProperties(writer)
-		s.OutputFunctions(writer)
+		if s.HasDocumentation() {
+			s.OutputHeader(writer)
+			s.OutputParents(writer)
+			s.OutputDescription(writer)
+			s.OutputProperties(writer)
+			s.OutputFunctions(writer)
+		}
 	}
 
 	for _, c := range classInfo {
-		c.OutputHeader(writer)
-		c.OutputParents(writer)
-		c.OutputDescription(writer)
-		c.OutputProperties(writer)
-		c.OutputFunctions(writer)
+		if c.HasDocumentation() {
+			c.OutputHeader(writer)
+			c.OutputParents(writer)
+			c.OutputDescription(writer)
+			c.OutputProperties(writer)
+			c.OutputFunctions(writer)
+		}
 	}
 
 	writer.Flush()

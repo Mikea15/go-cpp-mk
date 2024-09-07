@@ -121,6 +121,10 @@ func (d *DataInfo) OutputFunctions(writer *bufio.Writer) {
 	}
 }
 
+func (d *DataInfo) HasDocumentation() bool {
+	return len(d.Comments) > 0 && d.HasDocumentedProperties() || d.HasDocumentedFunctions()
+}
+
 func (d *DataInfo) HasDocumentedProperties() bool {
 	for _, prop := range d.Properties {
 		if len(prop.Comments) > 0 {
