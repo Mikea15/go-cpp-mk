@@ -28,293 +28,170 @@ Each class that can be implemented need to override a couple of virtual methods 
 
 ## File Info
 
- __FileName:__ `example.h`
-
-- [`FFlowContext;`](#FFlowContext;) 
-- [`FFlowActorReference;`](#FFlowActorReference;) 
-- [`UFlowPilotComponent;`](#UFlowPilotComponent;) 
-- [`UFlowPilotParent;`](#UFlowPilotParent;) 
-- [`UFlowPilotTask`](#UFlowPilotTask) 
-- [`UFlowPilotTask2`](#UFlowPilotTask2) 
-- [`UFlowPilotTask3`](#UFlowPilotTask3) 
-
-### `FFlowContext;` 
+__FileName:__ `example.h`
+- __Struct List:__ 
+[ [`FFlowContext`](#fflowcontext) ]
+- __Enum List:__ 
+[ [`EFPInternalTaskState`](#efpinternaltaskstate) | [`EFPStopType`](#efpstoptype) | [`EFPTaskResult`](#efptaskresult) | [`EFlowState`](#eflowstate) | [`EFlowActorScope`](#eflowactorscope) | [`EFlowActorSpawnLifetime`](#eflowactorspawnlifetime) | [`EFlowMode`](#eflowmode) ]
 
 
-## Properties
-
-No documented properties available
-
-## Functions
-
-No documented functions available
-
-### `FFlowActorReference;` 
+## `EFPInternalTaskState` 
 
 
-## Properties
-
-No documented properties available
-
-## Functions
-
-No documented functions available
-
-### `UFlowPilotComponent;` 
-
-
-## Properties
-
-No documented properties available
-
-## Functions
-
-No documented functions available
-
-### `UFlowPilotParent;` 
-
-
-## Properties
-
-No documented properties available
-
-## Functions
-
-No documented functions available
-
-### `UFlowPilotTask` 
-
-- __Parent Class:__ `UObject`
-
-## Properties
+### Properties
 
 ```cpp
-// Task name 
-UPROPERTY(EditDefaultsOnly, Category = "Task Options")
-FName TaskName = {};
+// Not started yet 
+Invalid = 0,
 
-// Task description 
-UPROPERTY(EditDefaultsOnly, Category = "Task Options")
-FName Description = {};
+// Setup done 
+Setup,
 
-// If False, Will skip this Task's execution 
-UPROPERTY(EditDefaultsOnly, Category = "Task Options")
-uint8 bEnabled: 1;
+// Started Execution 
+Started,
 
-// Parent Task 
-UPROPERTY()
-UFlowPilotTask* Parent = nullptr;
+// Is in Progress 
+Ticking,
 
-
-const FFlowContext* Context = nullptr;
-
-
-EFPInternalTaskState InternalState;
-
-```
-
-## Functions
-
-### `UFlowPilotTask`
-```cpp
-UFlowPilotTask();
-
-```
-
-### `Setup`
-> Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
-```cpp
-virtual void Setup(FFlowContext* InContext);
-
-```
-
-### `Enter`
-> Called when starting this Task. Returns true on success 
-```cpp
-virtual bool Enter();
-
-```
-
-### `Tick`
-> Called on Tick. Will success automatically if not implemented by Child classes 
-```cpp
-virtual EFPTaskResult Tick(float DeltaTime);
-
-```
-
-### `Exit`
-> Called when Task Finished 
-```cpp
-virtual void Exit(EFPTaskResult TaskResult);
-
-```
-
-### `Reset`
-> Resets all Tasks into their Setup States 
-```cpp
-virtual void Reset();
-
-```
-
-### `HasParent`
-> Disabled Tasks are skipped during execution \
-> Enables or Disables Task. Disabled Tasks will be skipped. \
-> Returns Task Name \
-> Sets Task Name \
-> Get Task Description \
-> Returns True if Task has Parent Task. \
-> Returns False if Task is Root Sequence Task 
-```cpp
-bool HasParent() const;
-
-```
-
-### `GetParent`
-> Returns Parent Task or nullptr 
-```cpp
-UFlowPilotTask* GetParent() const;
-
-```
-
-### `IsParent`
-> Sets Parent Task \
-> Returns True if This task is a FlowPilotParent Task containing children Tasks. 
-```cpp
-bool IsParent() const;
-
-```
-
-### `GetAsParent`
-> Returns this Cast to FlowPilotParent task. 
-```cpp
-UFlowPilotParent* GetAsParent();
-
-```
-
-### `HasStarted`
-> Returns true when Task Started 
-```cpp
-bool HasStarted() const;
-
-```
-
-### `IsActive`
-> Returns true when Task in Progress and Not Complete 
-```cpp
-bool IsActive() const;
-
-```
-
-### `IsComplete`
-> Returns true when Task is Complete 
-```cpp
-bool IsComplete() const;
-
-```
-
-### `ForEachActor`
-> Executes 'InFunc' to all Actors found from 'ActorReference' 
-```cpp
-bool ForEachActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(AActor* const /*Actor*/)> InFunc) const;
-
-```
-
-### `ForEachConstActor`
-> Executes 'InFunc' to all const Actors found from 'ActorReference' \
-> Const means the function should not modify 'Actors' 
-```cpp
-bool ForEachConstActor(const FFlowActorReference& ActorReference, TFunctionRef<bool(const AActor* const /*Actor*/)> InFunc) const;
-
-```
-
-### `INVALID METHOD NAME`
-```cpp
-protected:
-
-```
-
-### `GetFlowPilotComponent`
-> Returns FlowPilotComponent 
-```cpp
-UFlowPilotComponent* GetFlowPilotComponent() const;
-
-```
-
-### `GetFlowPilotOwnerActor`
-> Returns FlowPilotComponent Owner Actor 
-```cpp
-AActor* GetFlowPilotOwnerActor() const;
-
-```
-
-### `GetWorldContext`
-> Returns FlowPilot Actor World 
-```cpp
-UWorld* GetWorldContext() const;
-
-```
-
-### `GetWorld`
-```cpp
-virtual UWorld* GetWorld() const override;
-
-```
-
-### `INVALID METHOD NAME`
-```cpp
-protected:
+// ---- 
+// > Ticking = Completed 
+// Completed 
+Completed
 
 ```
 
 
-### `UFlowPilotTask2` 
+## `EFPStopType` 
 
-- __Parent Class:__ `UObject,`
-- __Parent Class:__ `USomeOtherClass,`
-- __Parent Class:__ `Interface`
 
-## Properties
+### Properties
 
-No documented properties available
-
-## Functions
-
-### `Setup`
-> Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
 ```cpp
-virtual void Setup(FFlowContext* InContext);
+// Cancel Execution will call Exit with Failure state on Running Tasks 
+CancelExecution,
 
-```
-
-### `Enter`
-> Called when starting this Task. Returns true on success 
-```cpp
-virtual bool Enter();
+// Stop Now will just stop execution. Exit won't be called. 
+StopNow
 
 ```
 
 
-### `UFlowPilotTask3` 
+## `EFPTaskResult` 
 
-- __Parent Class:__ `UObject`
 
-## Properties
+### Properties
 
-No documented properties available
-
-## Functions
-
-### `Setup`
-> Setups Tasks. Called once per FlowPilotExecution, even after restarts. 
 ```cpp
-virtual void Setup(FFlowContext* InContext);
+// Not started yet 
+None,
+
+// In progress and Ticking 
+InProgress,
+
+// Complete with Success Result 
+Succeeded,
+
+// Complete with Fail Result 
+Failed,
+
+// Not Complete. Return Error 
+Error
 
 ```
 
-### `Enter`
-> Called when starting this Task. Returns true on success 
+
+## `EFlowState` 
+
+
+### Properties
+
 ```cpp
-virtual bool Enter();
+// Not started yet 
+None,
+
+// FlowPilot Running 
+InProgress,
+
+// FlowPilot has started but is paused 
+Paused,
+
+// FlowPilot Done with Success 
+Succeeded,
+
+// FlowPilot Done with fail 
+Failed,
+
+// FlowPilot not Done, with Error 
+Error
 
 ```
 
+
+## `EFlowActorScope` 
+
+
+### Properties
+
+```cpp
+// Actor or Component is in Own Actor 
+Self,
+
+// Actor that live in the world 
+InLevel,
+
+// Actors spawned at Runtime 
+Runtime,
+
+```
+
+
+## `EFlowActorSpawnLifetime` 
+
+
+### Properties
+
+```cpp
+// Spawned actor will live during FlowPilot Execution, will despawn automatically when Flow Ends. 
+FlowPilot,
+
+// TODO (MA): Add a Checkpoint lifetime? 
+// or internal scope, example, when we add another FlowAsset, or a Parallel, 
+// sequence or selector. 
+// Spawned actors will stay on the level event when Flow Stops. 
+Persistent
+
+```
+
+
+## `EFlowMode` 
+
+
+### Properties
+
+```cpp
+// Executes Flow Once. 
+RunOnce,
+
+// Executes until Succeeds Once 
+RunUntilSucceed,
+
+// Executes until Fails Once 
+RunUntilFail,
+
+// Executes in Loop while Succeeds 
+RunWhileSucceed,
+
+// Executes in Loop while Fails 
+RunWhileFail,
+
+// Run non stop. 
+RunNonStop
+
+```
+
+
+## `FFlowContext` 
+
+
+ \
+Flow Context 

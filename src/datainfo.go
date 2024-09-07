@@ -122,7 +122,7 @@ func (d *DataInfo) OutputFunctions(writer *bufio.Writer) {
 }
 
 func (d *DataInfo) HasDocumentation() bool {
-	return len(d.Comments) > 0 && d.HasDocumentedProperties() || d.HasDocumentedFunctions()
+	return len(d.Comments) > 0 || d.HasDocumentedProperties() || d.HasDocumentedFunctions()
 }
 
 func (d *DataInfo) HasDocumentedProperties() bool {

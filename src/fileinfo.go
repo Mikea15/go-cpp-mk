@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"strings"
 )
 
 type LineId int
@@ -51,9 +52,9 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 			if c.HasDocumentation() {
 				isLast := i == len(classes)-1
 				if !isLast {
-					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + c.Name + ") | "))
+					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + strings.ToLower(c.Name) + ") | "))
 				} else {
-					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + c.Name + ")"))
+					writer.WriteString(fmt.Sprintf("[`" + c.Name + "`](#" + strings.ToLower(c.Name) + ")"))
 				}
 			}
 		}
@@ -68,9 +69,9 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 			if s.HasDocumentation() {
 				isLast := i == len(structs)-1
 				if !isLast {
-					writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + s.Name + ") | "))
+					writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + strings.ToLower(s.Name) + ") | "))
 				} else {
-					writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + s.Name + ")"))
+					writer.WriteString(fmt.Sprintf("[`" + s.Name + "`](#" + strings.ToLower(s.Name) + ")"))
 				}
 			}
 		}
@@ -85,9 +86,9 @@ func (f *FileInfo) OutputInfo(writer *bufio.Writer) (enums, structs, classes []D
 			if e.HasDocumentation() {
 				isLast := i == len(enums)-1
 				if !isLast {
-					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + e.Name + ") | "))
+					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + strings.ToLower(e.Name) + ") | "))
 				} else {
-					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + e.Name + ")"))
+					writer.WriteString(fmt.Sprintf("[`" + e.Name + "`](#" + strings.ToLower(e.Name) + ")"))
 				}
 			}
 		}
